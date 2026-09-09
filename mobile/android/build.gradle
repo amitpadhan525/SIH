@@ -10,6 +10,22 @@ subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
+    project.plugins.whenPluginAdded { plugin ->
+        if (plugin.class.name.startsWith("com.android.build.gradle.")) {
+            if (project.extensions.findByName("android") != null) {
+                if (!project.android.extensions.findByName("flutter")) {
+                    project.android.extensions.add("flutter", [
+                        compileSdkVersion: 35,
+                        minSdkVersion: 21,
+                        targetSdkVersion: 35,
+                        ndkVersion: "25.1.8937393"
+                    ])
+                }
+            }
+        }
+    }
+}
+subprojects {
     project.evaluationDependsOn(":app")
 }
 
