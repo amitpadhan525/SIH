@@ -1,0 +1,590 @@
+import 'package:flutter/material.dart';
+import 'package:artisan_mobile/core/theme/app_theme.dart';
+import 'package:artisan_mobile/services/product_service.dart';
+
+class VoiceCatalogScreen extends StatefulWidget {
+  final ProductService? productService;
+
+  const VoiceCatalogScreen({super.key, this.productService});
+
+  @override
+  State<VoiceCatalogScreen> createState() => _VoiceCatalogScreenState();
+}
+
+class _VoiceCatalogScreenState extends State<VoiceCatalogScreen>
+    with SingleTickerProviderStateMixin {
+  late final ProductService _productService;
+  late final TextEditingController _transcriptController;
+  late final AnimationController _pulseController;
+
+  bool _isRecording = false;
+  bool _isLoading = false;
+  String? _errorMessage;
+  Map<String, dynamic>? _catalogResult;
+  String _selectedLanguageTab = 'en';
+
+  static const Map<String, String> _craftVoiceSamples = {
+    'Sambalpuri Ikat Saree':
+        'This is a handwoven Sambalpuri double ikat cotton saree in maroon and black. '
+        'It is hand-crafted with traditional shankha and chakra border motifs using natural dyes. '
+        'It took our family 18 days on a pit loom. Dry clean or gentle cold water handwash only.',
+    'Terracotta Pot (Hindi)':
+        'यह मिट्टी का बना हुआ पारंपरिक टेराकोटा पानी का मटका और शोपीस है। '
+        'इसे हाथ से चाक पर प्राकृतिक लाल मिट्टी से बनाया गया है और भट्टी में पकाया गया है। '
+        'इसे बनाने में 3 दिन लगे। इसे सीधी धूप और तेज़ झटके से बचाएं।',
+    'Bastar Dokra Lamp':
+        'This is an authentic Dokra bell metal tribal lamp handcrafted using ancient lost-wax brass casting technique. '
+        'Made with solid brass and bronze in Bastar style with rustic antique gold finish. '
+        'Takes 7 days to complete. Wipe gently with dry cotton cloth.',
+    'Madhubani Art (Hindi)':
+        'यह हस्तनिर्मित मधुबनी पेंटिंग हस्तनिर्मित सूती कागज़ पर प्राकृतिक रंगों और बांस की टहनियों से बनाई गई है। '
+        'इसमें पारंपरिक मिथिला शैली में सूर्य और मछली का रेखांकन है। '
+        'कलाकार को इसे पूरा करने में 5 दिन लगे।',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _productService = widget.productService ?? ProductService();
+    _transcriptController = TextEditingController(
+      text: _craftVoiceSamples['Sambalpuri Ikat Saree'],
+    );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+  }
+
+  @override
+  void dispose() {
+    _transcriptController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _toggleRecording() {
+    setState(() {
+      _isRecording = !_isRecording;
+      if (_isRecording) {
+        _errorMessage = null;
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
+    });
+  }
+
+  Future<void> _processCatalogGeneration() async {
+    final text = _transcriptController.text.trim();
+    if (text.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please speak or enter a description first.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _productService.generateCatalogContent(
+        text,
+        targetLanguages: ['en', 'hi'],
+      );
+      setState(() {
+        _catalogResult = result;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to generate catalog: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _applyToProductForm() {
+    if (_catalogResult == null) return;
+
+    final content = _catalogResult!['content'] as Map<String, dynamic>?;
+    final enContent = content?['en'] as Map<String, dynamic>?;
+    final facts = _catalogResult!['verified_facts'] as Map<String, dynamic>?;
+
+    final appliedData = <String, dynamic>{
+      'name': enContent?['title'] ?? facts?['product_name'] ?? '',
+      'category': facts?['category'] ?? 'Handmade Crafts',
+      'description': enContent?['story_description'] ?? enContent?['short_description'] ?? '',
+      'materials': (facts?['materials'] as List<dynamic>?)?.join(', ') ?? '',
+      'technique': facts?['craft_technique'] ?? '',
+      'time_days': facts?['time_taken_days'],
+      'catalog_full': _catalogResult,
+    };
+
+    Navigator.of(context).pop(appliedData);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('AI Voice Auto-Cataloger'),
+        actions: [
+          if (_catalogResult != null)
+            TextButton.icon(
+              onPressed: _applyToProductForm,
+              icon: const Icon(Icons.check_circle, color: AppColors.primary),
+              label: const Text(
+                'Apply',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Voice Input Card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Speak about your craft in any language',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Mention materials, colors, technique, and time taken',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Big Mic Button with Pulse Animation
+                    GestureDetector(
+                      onTap: _toggleRecording,
+                      child: AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) {
+                          final scale = _isRecording ? 1.0 + (_pulseController.value * 0.12) : 1.0;
+                          return Transform.scale(
+                            scale: scale,
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isRecording ? Colors.red.shade600 : AppColors.primary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_isRecording ? Colors.red : AppColors.primary)
+                                        .withOpacity(0.35),
+                                    blurRadius: _isRecording ? 16 : 8,
+                                    spreadRadius: _isRecording ? 4 : 1,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isRecording ? Icons.mic : Icons.mic_none,
+                                color: Colors.white,
+                                size: 36,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _isRecording ? '🔴 Listening... (Tap to pause)' : 'Tap microphone to speak',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: _isRecording ? Colors.red.shade700 : AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Sample Voice Recordings Chips
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Or try a craft voice sample:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _craftVoiceSamples.entries.map((entry) {
+                        final isSelected = _transcriptController.text == entry.value;
+                        return ChoiceChip(
+                          label: Text(entry.key, style: const TextStyle(fontSize: 12)),
+                          selected: isSelected,
+                          selectedColor: AppColors.primaryLight,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _transcriptController.text = entry.value;
+                                _catalogResult = null;
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Transcript Text Box
+                    TextField(
+                      controller: _transcriptController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: 'Spoken Speech Transcript',
+                        hintText: 'Your spoken words appear here...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Generate Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _processCatalogGeneration,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.auto_awesome),
+                        label: Text(
+                          _isLoading ? 'AI Analyzing Facts...' : 'Generate Auto-Catalog',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                ),
+              ),
+            ],
+
+            if (_catalogResult != null) ...[
+              const SizedBox(height: 20),
+
+              // Anti-Hallucination Verified Facts Card
+              _buildVerifiedFactsCard(),
+
+              const SizedBox(height: 16),
+
+              // Localized Multilingual Catalog Card
+              _buildLocalizedContentCard(),
+
+              const SizedBox(height: 20),
+
+              // Bottom Apply Button
+              ElevatedButton.icon(
+                onPressed: _applyToProductForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text(
+                  'Auto-Fill Product Details with this Catalog',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerifiedFactsCard() {
+    final facts = _catalogResult!['verified_facts'] as Map<String, dynamic>? ?? {};
+    final materials = (facts['materials'] as List<dynamic>?)?.join(', ') ?? 'None stated';
+    final colors = (facts['colors'] as List<dynamic>?)?.join(', ') ?? 'None stated';
+    final technique = facts['craft_technique'] ?? 'Traditional handicraft';
+    final timeDays = facts['time_taken_days'];
+    final dimensions = facts['dimensions'] ?? 'Not specified in speech';
+    final care = (facts['care_instructions'] as List<dynamic>?)?.join(', ') ?? 'Standard handcraft care';
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.green.shade300, width: 1.5),
+      ),
+      color: Colors.green.shade50.withOpacity(0.4),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.verified_user, color: Colors.green.shade700, size: 22),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Verified Facts (Anti-Hallucination Safe)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '100% Grounded',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            _buildFactRow('Craft Technique', technique),
+            _buildFactRow('Stated Materials', materials),
+            _buildFactRow('Colors', colors),
+            if (timeDays != null) _buildFactRow('Time Taken', '$timeDays days'),
+            _buildFactRow('Dimensions', dimensions),
+            _buildFactRow('Care Instructions', care),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFactRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalizedContentCard() {
+    final contentMap = _catalogResult!['content'] as Map<String, dynamic>? ?? {};
+    final activeContent = contentMap[_selectedLanguageTab] as Map<String, dynamic>? ?? {};
+    final title = activeContent['title'] ?? '';
+    final shortDesc = activeContent['short_description'] ?? '';
+    final story = activeContent['story_description'] ?? '';
+    final features = (activeContent['key_features'] as List<dynamic>?) ?? [];
+    final tags = (_catalogResult!['suggested_tags'] as List<dynamic>?) ?? [];
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Language Tabs
+            Row(
+              children: [
+                const Text(
+                  'Catalog Preview:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                const Spacer(),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'en', label: Text('English')),
+                    ButtonSegment(value: 'hi', label: Text('हिन्दी')),
+                  ],
+                  selected: {_selectedLanguageTab},
+                  onSelectionChanged: (set) {
+                    setState(() {
+                      _selectedLanguageTab = set.first;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // E-commerce Title
+            Text(
+              'Product Title',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Short Description
+            Text(
+              'Short Description',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              shortDesc,
+              style: const TextStyle(fontSize: 14, height: 1.3),
+            ),
+            const SizedBox(height: 12),
+
+            // Story & Heritage Description
+            Text(
+              'Heritage & Craft Story',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              story,
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+
+            // Key Features
+            if (features.isNotEmpty) ...[
+              Text(
+                'Key Highlights',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              ...features.map((f) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Text(
+                            f.toString(),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 12),
+            ],
+
+            // Suggested Tags
+            if (tags.isNotEmpty) ...[
+              Text(
+                'Suggested Tags',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: tags.map((tag) {
+                  return Chip(
+                    label: Text(
+                      tag.toString(),
+                      style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                    ),
+                    backgroundColor: AppColors.primaryLight,
+                    padding: EdgeInsets.zero,
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

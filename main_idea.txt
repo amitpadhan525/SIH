@@ -1,0 +1,1969 @@
+Yes bro. Now we should treat **PS #90 as a real product**, not just an AI demo.
+
+The first important decision is:
+
+> **Build an Android-first mobile app for artisans + a web-based admin/marketplace dashboard + a backend API + AI services.**
+
+Don't make only a website. The problem specifically targets artisans with low digital literacy, and a mobile app gives us camera, microphone, notifications, and a much simpler experience.
+
+---
+
+# 1. What exactly are we building?
+
+Think of the whole system like this:
+
+```text
+                 ┌─────────────────────────┐
+                 │       ARTISAN           │
+                 │   Android Application   │
+                 └────────────┬────────────┘
+                              │
+                Photo / Voice / Basic Info
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │       BACKEND API       │
+                 │ Authentication          │
+                 │ Product Management      │
+                 │ Storage                 │
+                 │ Marketplace             │
+                 └────────────┬────────────┘
+                              │
+             ┌────────────────┼────────────────┐
+             ▼                ▼                ▼
+       Image AI           NLP / LLM        Pricing ML
+             │                │                │
+             ▼                ▼                ▼
+       Photo studio      Description       Price
+                         Translation       suggestion
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │   DIGITAL CATALOG       │
+                 │                         │
+                 │ Products                │
+                 │ Photos                  │
+                 │ Descriptions            │
+                 │ Prices                  │
+                 │ Inventory               │
+                 └────────────┬────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+               B2B Buyers        Govt Marketplace
+```
+
+---
+
+# 2. What platforms should we build?
+
+I'd divide it into **three components**.
+
+## A. Android application — MOST IMPORTANT
+
+This is what the artisan uses.
+
+For example:
+
+```text
+┌──────────────────────────────┐
+│        My Digital Shop       │
+│                              │
+│     Hello, Ramesh 👋         │
+│                              │
+│   ┌──────────────────────┐   │
+│   │    + ADD PRODUCT     │   │
+│   └──────────────────────┘   │
+│                              │
+│   My Products                │
+│   12 Products                │
+│                              │
+│   Orders                     │
+│   3 New                      │
+│                              │
+│   Earnings                   │
+│   ₹18,450                    │
+│                              │
+│   🏠 Home   📦 Products      │
+└──────────────────────────────┘
+```
+
+The UI should be **extremely simple**.
+
+Avoid:
+
+* complicated dashboards
+* 20 input fields
+* technical terminology
+* complicated navigation
+
+Instead:
+
+**Photo → Speak → Confirm → Publish**
+
+---
+
+# 3. Web application
+
+The website is still useful, but **not primarily for the artisan**.
+
+We can make a web dashboard for:
+
+### Government/admin
+
+They can see:
+
+```text
+Total Artisans       12,450
+Products             38,920
+Active Sellers        8,932
+Orders                4,120
+Total Sales          ₹2.4 Cr
+```
+
+And:
+
+* manage artisans
+* verify products
+* manage categories
+* monitor sales
+* manage exhibitions
+* view analytics
+* manage marketplace connections
+
+### B2B buyers
+
+A separate marketplace interface can allow buyers to discover products.
+
+For example:
+
+```text
+SEARCH
+
+[ Sambalpuri ]
+
+--------------------------------
+
+Sambalpuri Handwoven Saree
+₹2,400
+
+From: Odisha Artisan Cluster
+
+[View Product]
+
+--------------------------------
+
+Handmade Cotton Bag
+₹650
+
+From: Odisha Artisan
+
+[View Product]
+```
+
+---
+
+# 4. Our MVP
+
+This is VERY important for SIH.
+
+Don't try to build everything at once.
+
+Our **MVP** should contain these core features:
+
+### Feature 1 — Artisan registration
+
+```text
+Name
+Mobile number
+Location
+Craft type
+Language
+```
+
+But ideally most of this should be simplified.
+
+For example:
+
+> "What is your name?"
+
+Voice input could be used.
+
+---
+
+# 5. Feature 2 — AI Product Creation
+
+This is probably our **main feature**.
+
+The artisan presses:
+
+### `+ Add Product`
+
+Then:
+
+```text
+Take Product Photo 📸
+```
+
+They take a picture.
+
+Then:
+
+```text
+Tell us about your product 🎙️
+
+[ 🎤 Hold to speak ]
+```
+
+They speak naturally.
+
+Example:
+
+> "This is a handwoven Sambalpuri saree. It is made from cotton and took me around three days to make."
+
+That's it.
+
+Our system does the rest.
+
+---
+
+# 6. What happens technically?
+
+The flow becomes:
+
+```text
+Camera
+   │
+   ▼
+Image
+   │
+   ▼
+Backend
+   │
+   ├──────────────► Image Processing AI
+   │
+   └──────────────► Product AI
+                          ▲
+                          │
+                     Voice recording
+                          │
+                          ▼
+                    Speech-to-text
+```
+
+Then:
+
+```text
+Raw information
+
+       ↓
+
+AI processing
+
+       ↓
+
+Structured product
+
+{
+  name,
+  category,
+  material,
+  description,
+  keywords,
+  language,
+  price
+}
+```
+
+Then the artisan sees:
+
+```text
+┌──────────────────────────────┐
+│       YOUR PRODUCT           │
+│                              │
+│       [ PRODUCT IMAGE ]      │
+│                              │
+│ Sambalpuri Handwoven Saree   │
+│                              │
+│ Cotton                       │
+│ Handmade                     │
+│ Odisha                       │
+│                              │
+│ Suggested price: ₹2,400      │
+│                              │
+│ [ Edit ]       [ Publish ]   │
+└──────────────────────────────┘
+```
+
+---
+
+# 7. AI Image Enhancer
+
+This is one of the three explicitly requested features.
+
+The artisan takes a bad photo:
+
+```text
+        messy room
+    ┌─────────────────┐
+    │   saree         │
+    │   + table       │
+    │   + wall        │
+    │   + people      │
+    └─────────────────┘
+```
+
+Our system processes it.
+
+### Step 1 — Background removal
+
+Detect product:
+
+```text
+Original
+   ↓
+Object segmentation
+   ↓
+Remove background
+```
+
+### Step 2 — Background generation
+
+Put it against a clean background.
+
+### Step 3 — Lighting correction
+
+Improve:
+
+* brightness
+* contrast
+* exposure
+* white balance
+
+### Step 4 — Crop
+
+Automatically detect product boundaries.
+
+### Step 5 — E-commerce formatting
+
+Example:
+
+```text
+1080 × 1080
+```
+
+or whatever marketplace specification is required.
+
+---
+
+# 8. How do we implement Image AI?
+
+For the hackathon, **do NOT train our own image model from scratch.**
+
+That would waste time.
+
+We can build an AI pipeline using existing models/APIs.
+
+Conceptually:
+
+```text
+Upload Image
+     ↓
+Image Validation
+     ↓
+Background Segmentation
+     ↓
+Background Removal
+     ↓
+Image Enhancement
+     ↓
+Resize/Crop
+     ↓
+Final Product Image
+```
+
+Possible technologies:
+
+### Option A — Cloud AI
+
+Use an image-processing API.
+
+Advantages:
+
+* easier
+* faster
+* better results
+
+### Option B — Open-source models
+
+Run models on our backend.
+
+For example:
+
+```text
+Python
+PyTorch
+OpenCV
+Segmentation model
+Image enhancement model
+```
+
+This gives us more control.
+
+For SIH, I'd use **existing AI models + our own orchestration** rather than pretending we trained everything ourselves.
+
+---
+
+# 9. Voice → Product Description
+
+This is another major feature.
+
+Artisan speaks in:
+
+* Odia
+* Hindi
+* Bengali
+* Telugu
+* etc.
+
+Example:
+
+> "ଏହା ହାତରେ ବୁଣା ଶାଢ଼ୀ..."
+
+The system:
+
+```text
+Voice
+ ↓
+Speech-to-Text
+ ↓
+Detected language
+ ↓
+Translation
+ ↓
+LLM
+ ↓
+Structured product information
+```
+
+---
+
+# 10. Speech-to-text
+
+We need an STT system.
+
+Possible architecture:
+
+```text
+Mobile
+   │
+   │ audio
+   ▼
+Backend
+   │
+   ▼
+Speech Recognition
+   │
+   ▼
+Text
+```
+
+For the prototype we could use an existing multilingual speech model/API.
+
+The important thing is **not which model we use**.
+
+The important thing is that the system works like:
+
+> **Artisan speaks naturally → application understands it.**
+
+---
+
+# 11. LLM Product Cataloger
+
+Suppose speech recognition produces:
+
+```text
+This is a handmade cotton bag.
+It is made in Odisha.
+It takes two days to make.
+The bag has traditional patterns.
+```
+
+We send this to an LLM with a structured prompt.
+
+The AI returns something like:
+
+```json
+{
+  "product_name": "Handmade Traditional Cotton Bag",
+  "category": "Handicrafts",
+  "material": "Cotton",
+  "origin": "Odisha",
+  "production_method": "Handmade",
+  "description": "...",
+  "keywords": [
+    "handmade",
+    "cotton bag",
+    "Odisha handicraft",
+    "traditional"
+  ]
+}
+```
+
+This is much better than simply asking an LLM:
+
+> "Write a description."
+
+Because our backend needs **structured data**.
+
+---
+
+# 12. Multilingual support
+
+The artisan might speak:
+
+**Odia**
+
+But the buyer might want:
+
+**English**
+
+And perhaps the government marketplace requires:
+
+**Hindi + English**
+
+So:
+
+```text
+Odia Voice
+    ↓
+Odia Text
+    ↓
+Semantic understanding
+    ↓
+Product information
+    ├── English
+    └── Hindi
+```
+
+Important:
+
+### Don't translate word-by-word.
+
+Instead:
+
+```text
+Voice
+ ↓
+Meaning
+ ↓
+Structured product data
+ ↓
+Generate language-specific descriptions
+```
+
+This gives much better results.
+
+---
+
+# 13. Dynamic Pricing Assistant
+
+This is probably the hardest feature.
+
+The user wants:
+
+> "AI should suggest an optimal competitive selling price based on current market trends and raw material costs."
+
+We shouldn't simply ask an LLM:
+
+> "What should this saree cost?"
+
+That's unreliable.
+
+Instead create a **pricing engine**.
+
+---
+
+# 14. Pricing architecture
+
+We can calculate:
+
+```text
+Material Cost
++
+Labour Cost
++
+Production Time
++
+Packaging
++
+Platform Cost
++
+Market Price
++
+Demand
++
+Product Quality
+=
+Suggested Price
+```
+
+For example:
+
+```text
+Raw material          ₹900
+Labour                ₹500
+Packaging             ₹100
+Production overhead   ₹150
+                     -------
+Base cost            ₹1,650
+```
+
+Then market analysis:
+
+```text
+Similar products:
+
+₹2,000
+₹2,200
+₹2,350
+₹2,500
+₹2,400
+```
+
+AI/ML estimates:
+
+```text
+Market median = ₹2,350
+
+Suggested price
+       ↓
+₹2,399
+```
+
+---
+
+# 15. Where does market data come from?
+
+This is an important SIH consideration.
+
+We need legitimate sources such as:
+
+* government marketplace data where permitted
+* government datasets
+* public product/catalog data where permitted
+* artisan-entered raw material costs
+* our own platform sales
+* buyer demand
+* historical sales
+
+We should **not just scrape random e-commerce websites** without considering their terms.
+
+For the hackathon prototype, we can create a realistic dataset and clearly demonstrate the architecture for integrating real data.
+
+---
+
+# 16. Do we actually need Machine Learning?
+
+For MVP:
+
+### Not necessarily.
+
+We can initially build:
+
+```text
+Rule-based pricing
++
+Market statistics
++
+Regression model
+```
+
+For example:
+
+```text
+price =
+
+material_cost × 1.3
++
+labour_cost
++
+market_adjustment
++
+quality_adjustment
+```
+
+Then later replace this with an ML model.
+
+Possible model:
+
+```text
+Input:
+
+material
+category
+production_time
+material_cost
+region
+quality_score
+market_price
+demand
+season
+```
+
+Output:
+
+```text
+recommended_price
+```
+
+Model:
+
+```text
+Random Forest
+XGBoost
+Gradient Boosting
+```
+
+For a hackathon, **XGBoost/Random Forest + a good dataset** is more practical than deep learning.
+
+---
+
+# 17. Product database
+
+We need a proper backend database.
+
+Something like PostgreSQL.
+
+Our database could contain:
+
+### Users
+
+```text
+users
+-----
+id
+name
+phone
+language
+location
+artisan_type
+created_at
+```
+
+### Products
+
+```text
+products
+--------
+id
+artisan_id
+name
+category
+description
+material
+price
+status
+created_at
+```
+
+### Images
+
+```text
+product_images
+--------------
+id
+product_id
+original_url
+processed_url
+thumbnail_url
+```
+
+### Orders
+
+```text
+orders
+------
+id
+buyer_id
+product_id
+quantity
+price
+status
+created_at
+```
+
+### Pricing
+
+```text
+price_predictions
+-----------------
+id
+product_id
+material_cost
+market_price
+suggested_price
+confidence
+created_at
+```
+
+---
+
+# 18. Backend architecture
+
+I'd recommend:
+
+### Backend
+
+**FastAPI + Python**
+
+Why?
+
+Because we're using:
+
+* AI
+* ML
+* NLP
+* image processing
+
+Python makes this much easier.
+
+Architecture:
+
+```text
+                 ┌──────────────┐
+                 │ Android App  │
+                 └──────┬───────┘
+                        │
+                       HTTPS
+                        │
+                        ▼
+                ┌───────────────┐
+                │    FastAPI    │
+                │   REST API    │
+                └───────┬───────┘
+                        │
+          ┌─────────────┼──────────────┐
+          ▼             ▼              ▼
+      PostgreSQL      Redis       Object Storage
+          │                            │
+          │                            │
+          ▼                            ▼
+     Product Data                  Images
+```
+
+---
+
+# 19. Why object storage?
+
+Don't put images directly inside PostgreSQL.
+
+Instead:
+
+```text
+Image
+ ↓
+Object Storage
+ ↓
+URL
+ ↓
+Database stores URL
+```
+
+Possible storage:
+
+* AWS S3
+* Cloudflare R2
+* Supabase Storage
+* Firebase Storage
+
+For a prototype, Supabase can simplify things considerably.
+
+---
+
+# 20. Authentication
+
+The artisan shouldn't have to remember passwords.
+
+Use:
+
+```text
+Phone number
+      ↓
+OTP
+      ↓
+Login
+```
+
+Then backend generates:
+
+```text
+JWT access token
+```
+
+The app uses that token for API requests.
+
+---
+
+# 21. Android technology
+
+We have two good choices.
+
+### Option 1 — Flutter
+
+```text
+Flutter
+Dart
+```
+
+Advantages:
+
+* Android
+* iOS
+* fast development
+* one codebase
+
+### Option 2 — React Native
+
+```text
+React Native
+TypeScript
+```
+
+Also good.
+
+### My recommendation for this project:
+
+**Flutter**
+
+Because our target is primarily Android and we want a polished mobile UI quickly.
+
+---
+
+# 22. The actual Android flow
+
+The home screen should have maybe **4 major buttons**:
+
+```text
+┌───────────────────────────┐
+│       My Digital Shop     │
+│                           │
+│   Hello 👋                │
+│                           │
+│ ┌───────────────────────┐ │
+│ │    📸 ADD PRODUCT     │ │
+│ └───────────────────────┘ │
+│                           │
+│ 📦 My Products            │
+│                           │
+│ 💰 Sales                  │
+│                           │
+│ 🛒 Orders                 │
+│                           │
+│ ⚙️ Settings               │
+└───────────────────────────┘
+```
+
+---
+
+# 23. Add Product flow
+
+### Screen 1
+
+```text
+What are you selling?
+
+[ Take Photo 📸 ]
+```
+
+---
+
+### Screen 2
+
+```text
+Tell us about your product
+
+🎤
+
+"Hold to speak"
+```
+
+---
+
+### Screen 3
+
+AI processing:
+
+```text
+✨ Creating your product listing...
+
+✓ Improving photo
+✓ Understanding your product
+✓ Creating description
+✓ Translating
+✓ Calculating price
+```
+
+---
+
+### Screen 4
+
+```text
+Your Product
+
+[ BEAUTIFUL IMAGE ]
+
+Handmade Sambalpuri Saree
+
+Material: Cotton
+
+Description:
+Traditional handwoven saree...
+
+Suggested price:
+
+₹2,399
+
+[ Edit ]    [ Publish ]
+```
+
+That's the **killer demo**.
+
+---
+
+# 24. What happens when Publish is clicked?
+
+Backend:
+
+```text
+POST /products
+```
+
+Example:
+
+```json
+{
+  "name": "Handmade Sambalpuri Saree",
+  "category": "Saree",
+  "material": "Cotton",
+  "price": 2399,
+  "description": "...",
+  "image": "..."
+}
+```
+
+Backend:
+
+```text
+Validate
+ ↓
+Store product
+ ↓
+Store image
+ ↓
+Generate searchable metadata
+ ↓
+Publish
+```
+
+Then:
+
+```text
+Product Status: LIVE 🟢
+```
+
+---
+
+# 25. Search for B2B buyers
+
+Now we create another side of the platform.
+
+Buyer:
+
+```text
+Search:
+[ Sambalpuri Saree       🔍 ]
+
+Filters:
+
+Category
+Location
+Price
+Material
+MOQ
+Handmade
+```
+
+Results:
+
+```text
+┌─────────────────────────────┐
+│ [IMAGE]                     │
+│                             │
+│ Handwoven Sambalpuri Saree  │
+│ ₹2,399                      │
+│ MOQ: 10                     │
+│ Odisha                      │
+│                             │
+│ [Contact Artisan]           │
+└─────────────────────────────┘
+```
+
+---
+
+# 26. B2B is important
+
+Don't think only about individual consumers.
+
+The PS specifically mentions **larger B2B buyers**.
+
+So we can create:
+
+```text
+Artisan
+    ↓
+Our Platform
+    ↓
+Verified B2B Buyer
+    ↓
+Bulk Order
+```
+
+For example:
+
+```text
+Buyer wants:
+
+500 handmade bags
+```
+
+Our system can show:
+
+```text
+Available artisans:
+
+Artisan A → 150
+Artisan B → 100
+Artisan C → 250
+
+Total → 500
+```
+
+This can become a powerful feature.
+
+---
+
+# 27. Government marketplace integration
+
+This should be treated carefully.
+
+Don't claim:
+
+> "Our app automatically uploads to every government marketplace."
+
+unless we actually have an official API/integration.
+
+Instead architect it like:
+
+```text
+                    Product
+                       │
+                       ▼
+                Marketplace Adapter
+                  /           \
+                 /             \
+                ▼               ▼
+        Government API      B2B Platform
+```
+
+If APIs are available and permitted, we integrate.
+
+Otherwise:
+
+```text
+Export marketplace-ready catalog
+```
+
+For example:
+
+```text
+Download Catalog
+        ↓
+CSV / Excel / JSON
+        ↓
+Upload to marketplace
+```
+
+That's much safer for the prototype.
+
+---
+
+# 28. AI architecture
+
+Our AI layer can look like:
+
+```text
+                 AI ORCHESTRATOR
+                       │
+       ┌───────────────┼────────────────┐
+       │               │                │
+       ▼               ▼                ▼
+   Vision AI        Language AI      Pricing AI
+       │               │                │
+       ▼               ▼                ▼
+Image enhancement   NLP/LLM          ML model
+Background removal  Translation      Price prediction
+Product detection   Description
+```
+
+The **AI Orchestrator** is important.
+
+Instead of the Android app directly talking to five AI services:
+
+```text
+Android
+   ↓
+Backend
+   ↓
+AI Orchestrator
+   ├── Vision
+   ├── STT
+   ├── Translation
+   ├── LLM
+   └── Pricing
+```
+
+This makes the architecture much cleaner.
+
+---
+
+# 29. Suggested technology stack
+
+Here's what I'd use for our SIH prototype:
+
+| Layer             | Technology                        |
+| ----------------- | --------------------------------- |
+| Mobile            | Flutter                           |
+| Backend           | Python + FastAPI                  |
+| Database          | PostgreSQL                        |
+| Authentication    | OTP + JWT                         |
+| Storage           | S3/Supabase Storage               |
+| AI orchestration  | Python                            |
+| Speech-to-text    | Multilingual STT model/API        |
+| LLM               | Suitable multilingual LLM         |
+| Translation       | Translation model/API             |
+| Image processing  | OpenCV + segmentation/image model |
+| ML pricing        | XGBoost/Random Forest             |
+| Cache             | Redis                             |
+| Web frontend      | React/Next.js                     |
+| API communication | REST                              |
+| Deployment        | Docker                            |
+| Reverse proxy     | Nginx                             |
+| Monitoring        | Basic logging + metrics           |
+| Version control   | GitHub                            |
+
+---
+
+# 30. Complete system architecture
+
+The final architecture could look like this:
+
+```text
+                         INTERNET
+                            │
+             ┌──────────────┴──────────────┐
+             │                             │
+             ▼                             ▼
+       Flutter App                    Web Dashboard
+       (Artisans)                   (Admin / Buyers)
+             │                             │
+             └──────────────┬──────────────┘
+                            │
+                          HTTPS
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │   NGINX     │
+                     └──────┬──────┘
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │   FastAPI   │
+                     └──────┬──────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+    PostgreSQL          AI Service        Storage
+          │                 │                 │
+          │                 │                 │
+          │        ┌────────┼────────┐        │
+          │        │        │        │        │
+          │        ▼        ▼        ▼        │
+          │      Vision    NLP     Pricing    │
+          │        │        │        │        │
+          │        ▼        ▼        ▼        │
+          │     Images    Listings  Prices     │
+          │                                      │
+          └──────────────────────────────────────┘
+```
+
+---
+
+# 31. Security
+
+Since you're interested in cybersecurity, this is an area where you can make our project stronger—but **security shouldn't complicate the artisan experience**.
+
+We need:
+
+### Authentication
+
+```text
+OTP
+ ↓
+JWT
+```
+
+### Authorization
+
+```text
+Artisan
+Buyer
+Admin
+```
+
+Each has different permissions.
+
+For example:
+
+```text
+Artisan
+ ├── create product
+ ├── edit own product
+ └── see own orders
+
+Buyer
+ ├── search products
+ └── place orders
+
+Admin
+ ├── verify products
+ ├── manage users
+ └── analytics
+```
+
+### API security
+
+Implement:
+
+* HTTPS
+* JWT validation
+* rate limiting
+* input validation
+* file type validation
+* file size limits
+* secure image processing
+* SQL injection protection
+* authorization checks
+* audit logs
+
+---
+
+# 32. Very important: AI safety
+
+Our AI should **never silently invent product information**.
+
+Suppose artisan says:
+
+> "This is a cotton bag."
+
+The AI shouldn't suddenly write:
+
+> "100% organic premium cotton certified product."
+
+unless the artisan actually provided that information.
+
+So we should separate:
+
+### Verified information
+
+```text
+Material: Cotton
+```
+
+from:
+
+### AI-generated marketing content
+
+```text
+Beautiful traditional handmade bag...
+```
+
+And mark uncertain information.
+
+---
+
+# 33. AI confidence
+
+We can show:
+
+```text
+AI confidence
+
+Product category: 94%
+Material: 87%
+Image quality: 91%
+Price recommendation: 78%
+```
+
+If confidence is low:
+
+```text
+We aren't sure about the material.
+
+Is this:
+
+[ Cotton ]
+
+[ Silk ]
+
+[ Other ]
+```
+
+This is much better than allowing AI to hallucinate.
+
+---
+
+# 34. Offline / poor internet support
+
+This is **very important** for our target users.
+
+Many artisans may have poor connectivity.
+
+So our Android app should support:
+
+```text
+Take photo
+   ↓
+Save locally
+   ↓
+Record voice
+   ↓
+Save locally
+   ↓
+Internet available?
+   │
+   ├── YES → Upload
+   │
+   └── NO → Queue
+```
+
+Then:
+
+```text
+Internet returns
+       ↓
+Automatic upload
+       ↓
+AI processing
+       ↓
+Notification
+```
+
+This could be a **strong differentiator**.
+
+---
+
+# 35. Low-literacy UX
+
+Don't make the interface dependent on reading.
+
+We can use:
+
+### Large icons
+
+```text
+📸
+Add Product
+```
+
+### Voice interaction
+
+```text
+🎤 Speak
+```
+
+### Local languages
+
+```text
+ଓଡ଼ିଆ
+हिन्दी
+English
+বাংলা
+```
+
+### Visual status
+
+Instead of:
+
+```text
+Processing completed
+```
+
+use:
+
+```text
+✓ Product Ready
+```
+
+with clear visual feedback.
+
+---
+
+# 36. Notifications
+
+Example:
+
+```text
+🎉 Your product is now live!
+```
+
+or:
+
+```text
+📦 New buyer inquiry
+```
+
+or:
+
+```text
+💰 Your product received 12 views today
+```
+
+This helps artisans understand what's happening.
+
+---
+
+# 37. Analytics
+
+Artisan dashboard:
+
+```text
+This Month
+
+Views             1,240
+Product inquiries    32
+Orders                8
+Revenue          ₹18,450
+```
+
+And:
+
+```text
+Top Product
+
+Sambalpuri Saree
+     ↓
+420 views
+18 inquiries
+5 orders
+```
+
+This is useful for demonstrating the **impact** of the platform.
+
+---
+
+# 38. Government dashboard
+
+The admin dashboard can show:
+
+```text
+                 IMPACT DASHBOARD
+
+Registered Artisans       12,450
+
+Digital Catalogs          38,920
+
+Products Published       32,100
+
+B2B Buyers                 1,820
+
+Orders                    4,120
+
+Total Sales              ₹2.4 Cr
+
+Average Artisan Income    +27%
+```
+
+For the hackathon, we should clearly label simulated/demo metrics if they aren't based on real deployment data.
+
+---
+
+# 39. The most important user journey
+
+When judges ask:
+
+> "Show us how an artisan uses your system."
+
+We shouldn't start with architecture.
+
+We show this:
+
+### Step 1
+
+Artisan opens app.
+
+### Step 2
+
+Presses:
+
+**Add Product**
+
+### Step 3
+
+Takes photo.
+
+### Step 4
+
+Speaks in their own language.
+
+### Step 5
+
+AI processes everything.
+
+### Step 6
+
+AI generates:
+
+```text
+Image
+Name
+Description
+Translation
+Category
+Keywords
+Price
+```
+
+### Step 7
+
+Artisan simply presses:
+
+**Publish**
+
+### Step 8
+
+Buyer sees product.
+
+### Step 9
+
+Buyer sends bulk inquiry.
+
+### Step 10
+
+Artisan receives:
+
+> **New B2B inquiry — 100 units**
+
+🔥 **That is our complete story.**
+
+---
+
+# 40. What NOT to build initially
+
+This is extremely important.
+
+Don't waste our SIH time building:
+
+❌ complicated payment gateway
+❌ full Amazon-like marketplace
+❌ social media system
+❌ live chat with dozens of features
+❌ recommendation engine
+❌ blockchain
+❌ custom LLM
+❌ custom speech model
+❌ custom image model
+❌ nationwide marketplace
+❌ 50 languages
+
+We need to demonstrate the **core problem → AI solution → measurable impact**.
+
+---
+
+# 41. Development phases
+
+I'd build it in this order.
+
+## Phase 1 — UI/UX
+
+Build:
+
+```text
+Login
+ ↓
+Home
+ ↓
+Add Product
+ ↓
+Camera
+ ↓
+Voice
+ ↓
+AI Processing
+ ↓
+Product Preview
+ ↓
+Publish
+```
+
+First make the complete flow work with fake data.
+
+---
+
+## Phase 2 — Backend
+
+Create:
+
+```text
+FastAPI
+PostgreSQL
+JWT
+Product API
+User API
+Image upload
+```
+
+---
+
+## Phase 3 — Image AI
+
+Implement:
+
+```text
+Upload
+ ↓
+Background removal
+ ↓
+Enhancement
+ ↓
+Resize
+ ↓
+Return processed image
+```
+
+---
+
+## Phase 4 — Voice + NLP
+
+Implement:
+
+```text
+Voice
+ ↓
+STT
+ ↓
+Language detection
+ ↓
+Translation
+ ↓
+LLM
+ ↓
+Structured product JSON
+```
+
+---
+
+## Phase 5 — Pricing
+
+Start with:
+
+```text
+Cost calculation
++
+market dataset
++
+ML model
+```
+
+Then return:
+
+```text
+Suggested price
+Price range
+Reason
+Confidence
+```
+
+Example:
+
+```text
+Suggested price: ₹2,399
+
+Recommended range:
+₹2,200 – ₹2,600
+
+Why?
+• Material cost
+• Production time
+• Similar products
+• Current demand
+```
+
+---
+
+# 42. Phase 6 — Marketplace
+
+Build:
+
+```text
+Product catalog
+ ↓
+Search
+ ↓
+Filters
+ ↓
+Product page
+ ↓
+B2B inquiry
+```
+
+Then add marketplace export/integration if feasible.
+
+---
+
+# 43. Phase 7 — Admin dashboard
+
+Build:
+
+```text
+Admin login
+ ↓
+Analytics
+ ↓
+Artisans
+ ↓
+Products
+ ↓
+Orders
+ ↓
+B2B buyers
+```
+
+---
+
+# 44. Phase 8 — Offline support
+
+Then:
+
+```text
+Local database
+Offline queue
+Background synchronization
+```
+
+---
+
+# 45. Our MVP architecture
+
+If we're working under hackathon time pressure, I'd actually reduce it to:
+
+```text
+             FLUTTER APP
+                  │
+                  ▼
+              FASTAPI
+                  │
+       ┌──────────┼──────────┐
+       ▼          ▼          ▼
+    PostgreSQL   AI Layer   Storage
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+    Vision       LLM/STT      Pricing
+```
+
+That's enough.
+
+---
+
+# 46. What makes our solution impressive?
+
+Not simply:
+
+> "We use AI."
+
+Every team will say that.
+
+Our stronger story is:
+
+### **"One voice, one photo, one tap."**
+
+An artisan doesn't need to understand:
+
+* SEO
+* photography
+* e-commerce
+* translation
+* pricing
+* product cataloging
+
+Our system converts:
+
+```text
+Traditional craftsmanship
+          ↓
+       AI layer
+          ↓
+Digital commerce
+```
+
+---
+
+# 47. The final product vision
+
+Imagine an artisan who has **zero e-commerce knowledge**.
+
+They don't need to ask:
+
+> "How do I upload a product?"
+
+They simply:
+
+**📸 Take photo**
+
+**🎙️ Speak**
+
+**✅ Confirm**
+
+And our platform handles:
+
+```text
+                ARTISAN
+                   │
+          Photo + Voice
+                   │
+                   ▼
+             ┌───────────┐
+             │    AI     │
+             └─────┬─────┘
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+     Photo       Listing      Price
+     Studio        AI           AI
+       │           │           │
+       └───────────┼───────────┘
+                   ▼
+             DIGITAL SHOP
+                   │
+             ┌─────┴─────┐
+             ▼           ▼
+          B2B Buyers   Marketplace
+```
+
+**That's what we should build.**
+
+And one more thing: **we don't need to build the entire production-scale platform for SIH.** We need a convincing, functional prototype where the **artisan → AI → professional listing → buyer** journey actually works end-to-end. The architecture should show how it scales beyond the prototype.
+
+If we're doing this as your SIH project, **the next step should be to freeze the MVP and divide it into modules/tasks**, then we can start designing the actual app screen-by-screen and backend API-by-API.

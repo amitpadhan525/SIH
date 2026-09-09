@@ -1,0 +1,953 @@
+Yes bro. Since **you are the main coder**, we should not start by trying to build the AI first. That's the fastest way to get stuck.
+
+We should build this like a real software product:
+
+> **First make the basic product work end-to-end → then replace each part with AI.**
+
+# 🚀 Our development plan
+
+We're going to build **one complete vertical slice** first:
+
+```text
+Android App
+    ↓
+Take photo
+    ↓
+Enter/speak product info
+    ↓
+Backend
+    ↓
+Database
+    ↓
+Product created
+    ↓
+Show product
+```
+
+Once that works, we'll add:
+
+```text
+Image AI
+Voice AI
+Translation
+LLM cataloging
+Pricing ML
+B2B marketplace
+Admin dashboard
+```
+
+---
+
+# Phase 0 — Freeze our stack
+
+I recommend we lock this:
+
+```text
+Mobile       → Flutter + Dart
+Backend      → Python + FastAPI
+Database     → PostgreSQL
+ORM          → SQLAlchemy
+Cache/Queue  → Redis
+Storage      → S3-compatible storage
+Web          → Next.js + TypeScript
+AI           → Python AI services
+ML           → scikit-learn / XGBoost
+Containers   → Docker
+Version      → Git + GitHub
+Design       → Figma
+API testing  → Postman
+Security     → Burp Suite
+```
+
+Don't keep changing technologies halfway through.
+
+---
+
+# Phase 1 — Create the project
+
+Create one GitHub repository:
+
+```text
+artisan-ai/
+```
+
+Structure:
+
+```text
+artisan-ai/
+│
+├── mobile/
+│
+├── backend/
+│
+├── web/
+│
+├── ml/
+│
+├── infrastructure/
+│
+├── docs/
+│
+├── .gitignore
+├── README.md
+└── docker-compose.yml
+```
+
+Your first goal is simply:
+
+```text
+git clone
+cd artisan-ai
+```
+
+and everyone on your team can work from the same repository.
+
+---
+
+# Phase 2 — Build the backend FIRST
+
+Since you're the main coder, I recommend you start with the backend before touching advanced AI.
+
+Create:
+
+```text
+backend/
+├── app/
+│   ├── main.py
+│   ├── config.py
+│   │
+│   ├── api/
+│   │   ├── auth.py
+│   │   ├── products.py
+│   │   ├── users.py
+│   │   └── buyers.py
+│   │
+│   ├── models/
+│   │
+│   ├── schemas/
+│   │
+│   ├── services/
+│   │
+│   └── ai/
+│
+├── tests/
+├── requirements.txt
+└── Dockerfile
+```
+
+First API:
+
+```text
+GET /
+```
+
+should return:
+
+```json
+{
+  "status": "ok",
+  "service": "Artisan AI Backend"
+}
+```
+
+That's your first milestone.
+
+---
+
+# Phase 3 — Database
+
+Create PostgreSQL.
+
+Initially only create these tables:
+
+```text
+users
+artisans
+products
+product_images
+```
+
+Later:
+
+```text
+buyers
+orders
+inquiries
+price_predictions
+ai_jobs
+```
+
+### User
+
+```text
+id
+name
+phone
+role
+language
+location
+created_at
+```
+
+### Product
+
+```text
+id
+artisan_id
+name
+category
+description
+material
+price
+status
+created_at
+```
+
+### Product Image
+
+```text
+id
+product_id
+original_url
+processed_url
+created_at
+```
+
+---
+
+# Phase 4 — Build Product API
+
+This is our first **real functionality**.
+
+Create:
+
+```text
+POST /products
+GET /products
+GET /products/{id}
+PUT /products/{id}
+DELETE /products/{id}
+```
+
+For example:
+
+```text
+POST /products
+```
+
+Request:
+
+```json
+{
+  "name": "Handmade Cotton Bag",
+  "category": "Handicraft",
+  "material": "Cotton",
+  "description": "Traditional handmade cotton bag",
+  "price": 650
+}
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "name": "Handmade Cotton Bag",
+  "status": "draft"
+}
+```
+
+Test everything with **Swagger/Postman** before connecting Flutter.
+
+---
+
+# Phase 5 — Build the Flutter app
+
+Now create the Android application.
+
+Initial screens:
+
+```text
+Splash
+   ↓
+Login
+   ↓
+Home
+   ↓
+Add Product
+   ↓
+Camera
+   ↓
+Product Information
+   ↓
+Preview
+   ↓
+My Products
+```
+
+Don't implement AI yet.
+
+Use fake/static data initially.
+
+---
+
+# Phase 6 — Connect Flutter ↔ FastAPI
+
+Now the real application starts coming together.
+
+Flow:
+
+```text
+Flutter
+   │
+   │ POST /products
+   ▼
+FastAPI
+   │
+   ▼
+PostgreSQL
+   │
+   ▼
+Response
+   │
+   ▼
+Flutter
+```
+
+The artisan creates:
+
+> Handmade Cotton Bag
+
+and it actually appears under **My Products**.
+
+### 🎯 Milestone #1
+
+At this point you have a functioning:
+
+**Digital catalog application.**
+
+No fancy AI yet.
+
+---
+
+# Phase 7 — Camera
+
+Now add the camera.
+
+Flow:
+
+```text
+Add Product
+     ↓
+Take Photo
+     ↓
+Preview
+     ↓
+Upload
+     ↓
+Backend
+     ↓
+Storage
+```
+
+Database:
+
+```text
+products
+    │
+    └── product_images
+```
+
+Store the actual image in object storage, not PostgreSQL.
+
+---
+
+# Phase 8 — Image AI
+
+Now we attack the first PS-specific feature.
+
+```text
+Original Image
+      ↓
+Background Detection
+      ↓
+Background Removal
+      ↓
+Lighting Enhancement
+      ↓
+Crop
+      ↓
+Resize
+      ↓
+Professional Image
+```
+
+API:
+
+```text
+POST /ai/enhance-image
+```
+
+The mobile app doesn't care which model we're using.
+
+It simply says:
+
+```text
+"Enhance this image."
+```
+
+Backend handles the AI.
+
+That's good architecture.
+
+---
+
+# Phase 9 — Voice
+
+Add:
+
+```text
+🎤 Tell us about your product
+```
+
+The user speaks.
+
+Example:
+
+> "This is a handmade cotton bag made in Odisha."
+
+Flow:
+
+```text
+Flutter
+   ↓
+Audio
+   ↓
+FastAPI
+   ↓
+Speech-to-text
+   ↓
+Text
+```
+
+API:
+
+```text
+POST /ai/transcribe
+```
+
+Response:
+
+```json
+{
+  "language": "or",
+  "text": "..."
+}
+```
+
+---
+
+# Phase 10 — AI Cataloger
+
+Now the really interesting part.
+
+Input:
+
+```text
+Product image
++
+Voice transcript
+```
+
+AI generates:
+
+```json
+{
+  "name": "...",
+  "category": "...",
+  "material": "...",
+  "description": "...",
+  "keywords": []
+}
+```
+
+API:
+
+```text
+POST /ai/catalog
+```
+
+Then Flutter displays:
+
+```text
+✨ AI Generated Listing
+
+Product:
+Handmade Cotton Bag
+
+Material:
+Cotton
+
+Description:
+...
+
+Keywords:
+handmade
+cotton
+Odisha
+traditional
+```
+
+Artisan can press:
+
+**Edit**
+
+or
+
+**Accept**
+
+---
+
+# Phase 11 — Multilingual support
+
+Don't make translation a separate confusing feature for the artisan.
+
+Internally:
+
+```text
+Regional Voice
+      ↓
+Speech-to-text
+      ↓
+Structured Product Data
+      ↓
+English + Hindi
+```
+
+The user can select:
+
+```text
+Language
+
+○ Odia
+○ Hindi
+○ English
+```
+
+Eventually we can add more languages.
+
+---
+
+# Phase 12 — Pricing engine
+
+Now create:
+
+```text
+POST /ai/price
+```
+
+Input:
+
+```json
+{
+  "category": "Saree",
+  "material": "Cotton",
+  "material_cost": 900,
+  "labor_cost": 500,
+  "production_days": 3
+}
+```
+
+Pricing engine:
+
+```text
+Cost
++
+Market data
++
+Historical data
++
+Demand
++
+Product characteristics
+```
+
+Output:
+
+```json
+{
+  "suggested_price": 2399,
+  "minimum_price": 2200,
+  "maximum_price": 2600,
+  "confidence": 0.81
+}
+```
+
+The UI:
+
+```text
+┌─────────────────────────┐
+│ AI PRICE ASSISTANT      │
+│                         │
+│ Suggested               │
+│ ₹2,399                  │
+│                         │
+│ Range                   │
+│ ₹2,200 - ₹2,600         │
+│                         │
+│ Confidence: 81%         │
+│                         │
+│ [ Accept ]              │
+└─────────────────────────┘
+```
+
+---
+
+# Phase 13 — B2B marketplace
+
+Now we build the second side.
+
+### Buyer website
+
+```text
+Home
+ ↓
+Categories
+ ↓
+Search
+ ↓
+Product
+ ↓
+B2B Inquiry
+```
+
+Example:
+
+```text
+I want:
+
+Product: Cotton Bags
+Quantity: 500
+Budget: ₹300–₹500/unit
+
+[Send Inquiry]
+```
+
+Backend:
+
+```text
+POST /inquiries
+```
+
+Artisan receives:
+
+```text
+🔔 New B2B Inquiry
+
+500 Cotton Bags
+
+Buyer:
+ABC Handicrafts Pvt Ltd
+
+[View]
+```
+
+🔥 Now the original problem is being solved.
+
+---
+
+# Phase 14 — Admin dashboard
+
+Build the web dashboard.
+
+```text
+Admin
+│
+├── Dashboard
+├── Artisans
+├── Products
+├── Buyers
+├── Orders
+├── Inquiries
+└── Analytics
+```
+
+For the SIH demo:
+
+```text
+12,450 artisans
+38,920 products
+1,820 buyers
+4,120 inquiries
+```
+
+Again, clearly mark demo/synthetic data where appropriate.
+
+---
+
+# Phase 15 — Offline mode
+
+Once everything works online:
+
+```text
+Photo
+ ↓
+Local storage
+ ↓
+Voice
+ ↓
+Local queue
+ ↓
+Internet available
+ ↓
+Sync
+```
+
+This is a **Phase 2 feature**, not something I'd build on day one.
+
+---
+
+# Phase 16 — Security
+
+Then harden everything.
+
+Test:
+
+```text
+Authentication
+Authorization
+JWT
+API endpoints
+File upload
+Rate limits
+Input validation
+SQL injection
+IDOR
+CORS
+```
+
+Especially test:
+
+> Can Artisan A access Artisan B's products?
+
+If yes → **security vulnerability.**
+
+This is where your cybersecurity knowledge becomes useful.
+
+---
+
+# Phase 17 — Docker
+
+Once the application works:
+
+```text
+docker-compose
+```
+
+Run:
+
+```text
+FastAPI
+PostgreSQL
+Redis
+```
+
+with one command.
+
+Eventually:
+
+```text
+docker compose up
+```
+
+and the backend environment is ready.
+
+---
+
+# 🧠 Most important coding strategy
+
+Don't do this:
+
+```text
+AI
+ ↓
+AI
+ ↓
+AI
+ ↓
+AI
+ ↓
+Still no application
+```
+
+Do this:
+
+```text
+Basic App
+    ↓
+Backend
+    ↓
+Database
+    ↓
+Mobile
+    ↓
+API integration
+    ↓
+Image
+    ↓
+Voice
+    ↓
+LLM
+    ↓
+Pricing
+    ↓
+Marketplace
+```
+
+Every stage gives us something working.
+
+---
+
+# 🎯 Our milestones
+
+### M1 — Foundation
+
+```text
+GitHub
+FastAPI
+PostgreSQL
+Docker
+```
+
+### M2 — Digital Catalog
+
+```text
+Flutter
++
+FastAPI
++
+Database
+```
+
+### M3 — AI Product Creation
+
+```text
+Photo
++
+Voice
++
+AI
+```
+
+### M4 — Smart Commerce
+
+```text
+Pricing
++
+B2B
+```
+
+### M5 — Production polish
+
+```text
+Offline
+Security
+Admin
+Analytics
+```
+
+---
+
+# 🔥 Your first 3 days
+
+Don't think about the whole project.
+
+### Day 1
+
+Set up:
+
+```text
+Git
+Python
+FastAPI
+Docker
+PostgreSQL
+Flutter
+Android Studio
+```
+
+Then create:
+
+```text
+artisan-ai/
+```
+
+and get:
+
+```text
+GET /
+```
+
+working.
+
+---
+
+### Day 2
+
+Build:
+
+```text
+users
+artisans
+products
+product_images
+```
+
+Then implement:
+
+```text
+POST /products
+GET /products
+GET /products/{id}
+PUT /products/{id}
+```
+
+Test with Swagger/Postman.
+
+---
+
+### Day 3
+
+Create Flutter:
+
+```text
+Login
+Home
+Add Product
+Product Preview
+My Products
+```
+
+Connect:
+
+```text
+Flutter → FastAPI → PostgreSQL
+```
+
+At the end of Day 3, you should be able to **open the Android app, create a product, and see that product saved in PostgreSQL.**
+
+That is our **first real victory**.
+
+---
+
+## And bro, one important thing
+
+Since **you're the coder**, don't try to memorize everything before starting.
+
+We'll build this together **incrementally**.
+
+When you're ready, our next task should literally be:
+
+> **"Let's start Phase 1."**
+
+Then I'll give you the **exact folder structure, commands, dependencies, Docker configuration, FastAPI starter code, PostgreSQL configuration, and Git workflow** to get the first version running on your Arch Linux machine.

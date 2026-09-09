@@ -1,0 +1,144 @@
+No bro — **we don't need to buy a physical server**, especially for the SIH prototype.
+
+But **some AI/API services may cost money** depending on what we choose. We can design the project so that the **initial development/demo costs are close to ₹0**.
+
+### What we actually need
+
+| Component          | Need to pay? | For SIH                               |
+| ------------------ | ------------ | ------------------------------------- |
+| Development laptop | ❌ No         | Your existing laptop                  |
+| Android phone      | ❌ No         | Use yours                             |
+| Flutter            | ❌ No         | Free                                  |
+| FastAPI            | ❌ No         | Free/open source                      |
+| PostgreSQL         | ❌ No         | Free/open source                      |
+| Redis              | ❌ No         | Free/open source                      |
+| Docker             | ❌ No         | Free                                  |
+| GitHub             | ❌ No         | Free tier is enough                   |
+| Figma              | ❌/optional   | Free tier                             |
+| Image processing   | ❌            | Open-source possible                  |
+| Speech-to-text     | ❌/💰         | Open-source possible                  |
+| LLM                | ❌/💰         | Open-source/local possible            |
+| Translation        | ❌/💰         | Open-source possible                  |
+| Pricing ML         | ❌            | We can build it ourselves             |
+| Cloud server       | 💰           | **Not initially necessary**           |
+| SMS/OTP            | 💰           | Can use demo authentication initially |
+| Domain             | 💰           | Not necessary                         |
+
+### The key point
+
+We can build the prototype like this:
+
+```text
+             YOUR LAPTOP
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+     Flutter             Backend
+        │                   │
+        │                FastAPI
+        │                   │
+        │          ┌────────┼────────┐
+        │          │        │        │
+        │      PostgreSQL  AI       ML
+        │
+        └─────────── Local Network
+```
+
+For the **SIH demo**, everything can run locally or use free-tier services.
+
+### But what about AI?
+
+We have two approaches.
+
+**Option A — Local/open-source**
+
+```text
+Flutter
+   ↓
+FastAPI
+   ↓
+Local AI models
+   ├── Speech
+   ├── Image
+   └── NLP
+```
+
+Cost: **₹0 API cost**
+
+But your laptop has limited resources, so we need to choose lightweight models carefully.
+
+**Option B — Cloud APIs**
+
+```text
+Flutter
+   ↓
+FastAPI
+   ↓
+Cloud AI API
+```
+
+Much easier and often better quality, but usage can cost money.
+
+---
+
+### What I'd recommend for our SIH project
+
+**Hybrid approach.**
+
+Use open-source/local components wherever practical:
+
+```text
+Image processing       → Local
+Pricing ML             → Local
+Database               → Local
+Backend                → Local
+Frontend               → Local
+
+LLM                    → API or local model
+Speech-to-text         → API or local model
+Translation            → API or open-source
+```
+
+Then we don't become dependent on a huge monthly bill.
+
+### Server?
+
+For development:
+
+**No server.**
+
+For the final SIH demo:
+
+**Your laptop can even act as the server** if everyone is on the same network.
+
+For a real deployed product later:
+
+```text
+Cloud VPS
+      +
+PostgreSQL
+      +
+Object Storage
+      +
+AI services
+```
+
+Then we'd pay perhaps a small monthly amount depending on traffic.
+
+---
+
+### One thing I would NOT do
+
+Don't start paying for:
+
+* AWS EC2
+* expensive GPU servers
+* OpenAI/other APIs
+* SMS services
+* managed databases
+
+**before we know exactly what the prototype needs.**
+
+First build the entire pipeline locally with free/open-source components. Then identify which AI components genuinely need a paid API.
+
+If you want, I can next give you a **₹0 SIH implementation stack**—exactly which free/open-source model to use for **image enhancement + speech + translation + LLM + pricing**, and whether your **Ryzen 5 5500U + 16 GB RAM** can run each one.

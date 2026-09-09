@@ -1,0 +1,38 @@
+                 ┌─────────────────────────┐
+                 │       ARTISAN           │
+                 │   Android Application   │
+                 └────────────┬────────────┘
+                              │
+                Photo / Voice / Basic Info
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │       BACKEND API       │
+                 │ Authentication          │
+                 │ Product Management      │
+                 │ Storage                 │
+                 │ Marketplace             │
+                 └────────────┬────────────┘
+                              │
+             ┌────────────────┼────────────────┐
+             ▼                ▼                ▼
+       Image AI           NLP / LLM        Pricing ML
+             │                │                │
+             ▼                ▼                ▼
+       Photo studio      Description       Price
+                         Translation       suggestion
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │   DIGITAL CATALOG       │
+                 │                         │
+                 │ Products                │
+                 │ Photos                  │
+                 │ Descriptions            │
+                 │ Prices                  │
+                 │ Inventory               │
+                 └────────────┬────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+               B2B Buyers        Govt Marketplace

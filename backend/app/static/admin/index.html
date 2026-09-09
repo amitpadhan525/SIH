@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artisan Studio AI — Web Admin & Buyer Discovery Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #D35400;
+      --primary-dark: #A04000;
+      --primary-light: #FDEBD0;
+      --accent: #2E7D32;
+      --bg: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --text-main: #1A1C1E;
+      --text-muted: #5A6065;
+      --border: #E2E8F0;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    /* Navbar */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--primary);
+    }
+    .brand-badge {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* Navigation Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      background: #ECEFF1;
+      padding: 4px;
+      border-radius: 10px;
+    }
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1280px;
+      margin: 28px auto;
+      padding: 0 24px;
+    }
+
+    /* Top Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 6px 0;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Content Card */
+    .content-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 28px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .data-table th {
+      padding: 12px 14px;
+      background: #F8FAFC;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+    }
+    .data-table td {
+      padding: 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-published { background: #E8F5E9; color: #2E7D32; }
+    .badge-draft { background: #FFF8E1; color: #F57F17; }
+    .badge-pending { background: #E3F2FD; color: #1565C0; }
+    .badge-contacted { background: #EDE7F6; color: #512DA8; }
+    .badge-accepted { background: #E8F5E9; color: #2E7D32; }
+
+    /* Action Buttons */
+    .btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { background: #F1F5F9; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* Modal / JSON Viewer */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white;
+      width: 90%;
+      max-width: 700px;
+      border-radius: var(--radius);
+      padding: 24px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-md);
+    }
+    pre {
+      background: #1E293B;
+      color: #38BDF8;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span>🏺 Artisan Studio AI</span>
+      <span class="brand-badge">SIH 2026</span>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Overview</button>
+      <button class="tab-btn" onclick="switchTab('catalog')">🎨 Products</button>
+      <button class="tab-btn" onclick="switchTab('inquiries')">📬 Wholesale Leads</button>
+      <button class="tab-btn" onclick="switchTab('marketplace')">🌐 Discovery Feed</button>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="loadAllData()">🔄 Refresh</button>
+      <a href="/docs" target="_blank" class="btn btn-primary">📖 API Docs</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- TOP METRICS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-title">Registered Artisans</span>
+        <span class="stat-value" id="stat-artisans">--</span>
+        <span class="stat-sub">100% Verified Micro-Entrep.</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Cataloged Crafts</span>
+        <span class="stat-value" id="stat-products">--</span>
+        <span class="stat-sub" id="stat-published-sub">-- Published</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Catalog Valuation</span>
+        <span class="stat-value" id="stat-val">₹--</span>
+        <span class="stat-sub">Fair Living-Wage Value</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Buyer Inquiries</span>
+        <span class="stat-value" id="stat-inquiries">--</span>
+        <span class="stat-sub" id="stat-pending-inq">-- Pending RFQs</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">ONDC / GeM Export</span>
+        <span class="stat-value" id="stat-ondc">--</span>
+        <span class="stat-sub">Govt & Retail Protocol Ready</span>
+      </div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">Craft Category Distribution & Economic Impact</h2>
+        </div>
+        <div id="category-bars" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: PRODUCTS -->
+    <div id="tab-catalog" class="tab-content" style="display: none;">
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">Artisan Handicraft Products</h2>
+          <span class="badge badge-published" id="catalog-count-badge">-- items</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Price (INR)</th>
+              <th>Status</th>
+              <th>Protocols</th>
+            </tr>
+          </thead>
+          <tbody id="products-table-body">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: INQUIRIES -->
+    <div id="tab-inquiries" class="tab-content" style="display: none;">
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">Buyer Inquiries & Wholesale Leads</h2>
+          <span class="badge badge-pending" id="inquiries-count-badge">-- Leads</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Buyer Name</th>
+              <th>Type / Target</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="inquiries-table-body">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: MARKETPLACE DISCOVERY -->
+    <div id="tab-marketplace" class="tab-content" style="display: none;">
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">Public Discovery Feed</h2>
+          <span class="badge badge-published">Live Feed</span>
+        </div>
+        <div id="discovery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- PROTOCOL MODAL -->
+  <div class="modal-overlay" id="protocolModal">
+    <div class="modal">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 id="modalTitle" style="font-family: Outfit; font-size: 18px;">Protocol Export</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal()">✕ Close</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted);" id="modalDesc">Standard protocol payload for e-commerce interoperability.</p>
+      <pre id="modalJson">Loading payload...</pre>
+    </div>
+  </div>
+
+  <script>
+    async function loadAllData() {
+      try {
+        // 1. Stats
+        const statsRes = await fetch('/admin/stats');
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          const m = statsData.metrics;
+          document.getElementById('stat-artisans').innerText = m.total_artisans;
+          document.getElementById('stat-products').innerText = m.total_products;
+          document.getElementById('stat-published-sub').innerText = `${m.published_products} Published`;
+          document.getElementById('stat-val').innerText = '₹' + m.total_catalog_value_inr.toLocaleString('en-IN');
+          document.getElementById('stat-inquiries').innerText = m.total_buyer_inquiries;
+          document.getElementById('stat-pending-inq').innerText = `${m.pending_inquiries} Pending`;
+          document.getElementById('stat-ondc').innerText = `${m.ondc_ready_count} Items`;
+
+          // Render categories
+          const catContainer = document.getElementById('category-bars');
+          catContainer.innerHTML = '';
+          const totalProds = m.total_products || 1;
+          for (const [cat, count] of Object.entries(statsData.category_distribution)) {
+            const pct = Math.round((count / totalProds) * 100);
+            catContainer.innerHTML += `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
+                  <span>${cat}</span>
+                  <span>${count} products (${pct}%)</span>
+                </div>
+                <div style="height: 8px; background: #E2E8F0; border-radius: 4px; overflow: hidden;">
+                  <div style="height: 100%; width: ${pct}%; background: var(--primary); border-radius: 4px;"></div>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        // 2. Products
+        const prodRes = await fetch('/products');
+        const products = await prodRes.json();
+        const prodTbody = document.getElementById('products-table-body');
+        document.getElementById('catalog-count-badge').innerText = `${products.length} Items`;
+        prodTbody.innerHTML = '';
+        products.forEach(p => {
+          prodTbody.innerHTML += `
+            <tr>
+              <td><strong>#${p.id}</strong></td>
+              <td>
+                <div style="font-weight: 700; color: var(--text-main);">${p.name}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">${p.material || 'Handcrafted'}</div>
+              </td>
+              <td>${p.category}</td>
+              <td><strong>₹${parseFloat(p.price || 0).toLocaleString('en-IN')}</strong></td>
+              <td><span class="badge badge-${p.status}">${p.status}</span></td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="showOndcExport(${p.id})">ONDC JSON</button>
+                <button class="btn btn-outline btn-sm" onclick="showGemExport(${p.id})">GeM Govt</button>
+              </td>
+            </tr>
+          `;
+        });
+
+        // 3. Inquiries
+        const inqRes = await fetch('/artisans/1/inquiries');
+        const inquiries = await inqRes.json();
+        const inqTbody = document.getElementById('inquiries-table-body');
+        document.getElementById('inquiries-count-badge').innerText = `${inquiries.length} Leads`;
+        inqTbody.innerHTML = '';
+        inquiries.forEach(inq => {
+          inqTbody.innerHTML += `
+            <tr>
+              <td>#${inq.id}</td>
+              <td>
+                <strong>${inq.buyer_name}</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">${inq.buyer_phone}</div>
+              </td>
+              <td>${inq.buyer_type}</td>
+              <td><strong>${inq.quantity} units</strong></td>
+              <td><span class="badge badge-${inq.status}">${inq.status}</span></td>
+              <td>
+                <button class="btn btn-primary btn-sm" onclick="updateInqStatus(${inq.id}, 'contacted')">Contact</button>
+                <button class="btn btn-outline btn-sm" onclick="updateInqStatus(${inq.id}, 'accepted')">Accept</button>
+              </td>
+            </tr>
+          `;
+        });
+
+        // 4. Discovery Feed
+        const discRes = await fetch('/marketplace/products');
+        const discData = await discRes.json();
+        const discGrid = document.getElementById('discovery-grid');
+        discGrid.innerHTML = '';
+        const productList = Array.isArray(discData) ? discData : (discData.products || []);
+        if (productList.length === 0) {
+          discGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px;">No published products available in public marketplace feed yet.</div>';
+        } else {
+          productList.forEach(p => {
+            discGrid.innerHTML += `
+              <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span class="badge badge-published">${p.category}</span>
+                    <span style="font-size: 12px; color: var(--text-muted);">Artisan #${p.artisan_id}</span>
+                  </div>
+                  <h4 style="font-family: Outfit; font-size: 16px; margin-bottom: 6px;">${p.name}</h4>
+                  <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">${p.description || 'Authentic traditional Indian handicraft.'}</p>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+                  <span style="font-size: 18px; font-weight: 800; color: var(--primary);">₹${p.price}</span>
+                  <button class="btn btn-primary btn-sm" onclick="alert('Wholesale lead inquiry modal opened for '+${p.id})">Inquire B2B</button>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).style.display = 'block';
+    }
+
+    async function showOndcExport(productId) {
+      document.getElementById('protocolModal').style.display = 'flex';
+      document.getElementById('modalTitle').innerText = 'ONDC Protocol Standard Item JSON';
+      document.getElementById('modalDesc').innerText = 'Interoperable retail descriptor formatted to Beckn/ONDC retail specifications.';
+      const res = await fetch(`/marketplace/export/ondc/${productId}`);
+      const json = await res.json();
+      document.getElementById('modalJson').innerText = JSON.stringify(json, null, 2);
+    }
+
+    async function showGemExport(productId) {
+      document.getElementById('protocolModal').style.display = 'flex';
+      document.getElementById('modalTitle').innerText = 'Government e-Marketplace (GeM) Bulk Catalog';
+      document.getElementById('modalDesc').innerText = 'Standard Indian Public Procurement schema with CPSE reserved MSME classification.';
+      const res = await fetch(`/marketplace/export/gem/${productId}`);
+      const json = await res.json();
+      document.getElementById('modalJson').innerText = JSON.stringify(json, null, 2);
+    }
+
+    async function updateInqStatus(id, newStatus) {
+      await fetch(`/inquiries/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      loadAllData();
+    }
+
+    function closeModal() {
+      document.getElementById('protocolModal').style.display = 'none';
+    }
+
+    window.onload = loadAllData;
+  </script>
+</body>
+</html>

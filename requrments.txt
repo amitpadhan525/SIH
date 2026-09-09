@@ -1,0 +1,1296 @@
+Absolutely bro. For **PS #90**, we need quite a few components, but we don't need expensive infrastructure for the **SIH prototype**.
+
+I'd divide everything into **10 categories**.
+
+---
+
+# 1. Development machine
+
+Your existing laptop is enough for development.
+
+You need:
+
+### Required
+
+* Linux/Windows
+* Git
+* VS Code
+* Android Studio
+* Python
+* Flutter SDK
+* Node.js
+* Docker
+
+Your Arch Linux setup is perfectly suitable.
+
+### Recommended
+
+```text
+Arch Linux
+├── VS Code
+├── Android Studio
+├── Flutter
+├── Python 3
+├── Node.js
+├── Docker
+├── PostgreSQL
+└── Git
+```
+
+You **don't need a powerful GPU** to build the application if we're using cloud AI APIs.
+
+---
+
+# 2. Mobile app development
+
+Our main application will be Android-first.
+
+### Stack
+
+**Flutter + Dart**
+
+Resources/tools:
+
+* Flutter SDK
+* Android Studio
+* Android SDK
+* Android Emulator
+* Physical Android phone for testing
+* VS Code/Android Studio
+
+We'll use Flutter packages for:
+
+```text
+Camera
+Microphone
+GPS/location
+Local storage
+HTTP/API
+Authentication
+Notifications
+Image handling
+```
+
+The most important device capabilities are:
+
+```text
+📷 Camera
+🎤 Microphone
+📱 Offline storage
+🌐 Internet
+🔔 Notifications
+```
+
+---
+
+# 3. Backend
+
+We'll use:
+
+### Python
+
+### FastAPI
+
+Backend responsibilities:
+
+```text
+Authentication
+Products
+Users
+Images
+AI requests
+Pricing
+Orders
+B2B inquiries
+Marketplace
+```
+
+You'll need:
+
+```text
+Python 3
+FastAPI
+Uvicorn
+Pydantic
+SQLAlchemy
+Alembic
+httpx
+python-multipart
+```
+
+Architecture:
+
+```text
+Flutter
+   ↓ HTTPS
+FastAPI
+   ↓
+Services
+```
+
+---
+
+# 4. Database
+
+Use:
+
+### PostgreSQL
+
+It will store:
+
+```text
+Users
+Artisans
+Products
+Categories
+Prices
+Orders
+B2B buyers
+AI results
+Marketplace information
+```
+
+For development:
+
+```text
+Docker
+   ↓
+PostgreSQL container
+```
+
+This means you don't have to install/configure PostgreSQL directly on your host.
+
+---
+
+# 5. Image AI
+
+This is one of the biggest components.
+
+We need:
+
+### Basic image processing
+
+**OpenCV**
+
+For:
+
+* resize
+* crop
+* brightness
+* contrast
+* image validation
+* compression
+
+### Background removal
+
+We can use an existing segmentation/background-removal model or service.
+
+The pipeline:
+
+```text
+Camera
+   ↓
+Original image
+   ↓
+Background detection
+   ↓
+Background removal
+   ↓
+Lighting correction
+   ↓
+Crop
+   ↓
+Resize
+   ↓
+Final image
+```
+
+We don't need to train a model.
+
+---
+
+# 6. Voice + language AI
+
+This is another major component.
+
+We need:
+
+### Speech-to-text
+
+Artisan:
+
+> 🎤 speaks in Odia/Hindi/etc.
+
+System:
+
+```text
+Audio
+ ↓
+Speech-to-text
+ ↓
+Text
+```
+
+We can use a multilingual speech model/API rather than training our own.
+
+---
+
+### Language detection
+
+Determine:
+
+```text
+Odia
+Hindi
+Bengali
+Telugu
+English
+...
+```
+
+---
+
+### Translation
+
+Example:
+
+```text
+Odia
+ ↓
+English
+```
+
+and:
+
+```text
+Odia
+ ↓
+Hindi
+```
+
+---
+
+# 7. LLM
+
+We need an LLM for the **cataloging assistant**.
+
+The LLM receives:
+
+```text
+Product photo
++
+Speech transcript
++
+Artisan information
+```
+
+and produces structured information:
+
+```json
+{
+  "name": "...",
+  "category": "...",
+  "material": "...",
+  "description": "...",
+  "keywords": [],
+  "dimensions": "...",
+  "craft_type": "..."
+}
+```
+
+### Important
+
+We don't need to build/train our own LLM.
+
+Use an existing API/model.
+
+The backend becomes:
+
+```text
+Flutter
+   ↓
+FastAPI
+   ↓
+AI Orchestrator
+   ↓
+LLM
+```
+
+This also means we can change the underlying model later without modifying the Android app.
+
+---
+
+# 8. Pricing system
+
+This requires **data + ML**, not just an LLM.
+
+We need:
+
+### Data
+
+For example:
+
+```text
+Product category
+Material
+Raw material cost
+Labour
+Production time
+Location
+Historical price
+Market price
+Demand
+Season
+```
+
+Example:
+
+```text
+Saree
+Cotton
+₹900 material
+3 days labour
+₹500 labour
+Market prices:
+₹2,000
+₹2,200
+₹2,350
+₹2,500
+```
+
+Then ML predicts:
+
+```text
+Recommended price
+₹2,350–₹2,500
+```
+
+### Tools
+
+Python:
+
+```text
+pandas
+numpy
+scikit-learn
+xgboost
+```
+
+For SIH, we can start with a **small curated dataset** and later explain how real market data would be integrated.
+
+---
+
+# 9. File/image storage
+
+Images should NOT be stored directly inside PostgreSQL.
+
+Use object storage.
+
+Options:
+
+### Easy prototype
+
+**Supabase Storage**
+
+or
+
+### Production-oriented
+
+**Amazon S3**
+
+Architecture:
+
+```text
+Phone
+ ↓
+FastAPI
+ ↓
+Object Storage
+ ↓
+Image URL
+ ↓
+PostgreSQL
+```
+
+Database only stores:
+
+```text
+image_url
+```
+
+---
+
+# 10. Authentication
+
+Use:
+
+### Phone + OTP
+
+Artisan enters:
+
+```text
++91 XXXXX XXXXX
+```
+
+Then:
+
+```text
+OTP
+ ↓
+Verify
+ ↓
+JWT
+```
+
+Backend uses:
+
+```text
+Access Token
+Refresh Token
+```
+
+For SIH, we can initially implement a development OTP flow and then connect a real SMS/OTP provider.
+
+---
+
+# 11. Web application
+
+We should build a web dashboard too.
+
+### Technology
+
+**Next.js + TypeScript**
+
+It can contain two major interfaces.
+
+### Admin
+
+```text
+Dashboard
+Artisans
+Products
+Orders
+B2B Buyers
+Analytics
+Verification
+```
+
+### Buyer
+
+```text
+Search
+Categories
+Products
+Filters
+Product details
+B2B inquiry
+```
+
+---
+
+# 12. API
+
+The mobile app and website communicate with our backend.
+
+Example:
+
+```text
+POST /auth/send-otp
+POST /auth/verify-otp
+
+POST /products
+GET  /products
+GET  /products/{id}
+PUT  /products/{id}
+
+POST /products/{id}/image
+POST /products/{id}/voice
+
+POST /ai/catalog
+POST /ai/enhance-image
+POST /ai/translate
+POST /ai/price
+
+GET /marketplace/products
+POST /buyer/inquiry
+```
+
+We'll document everything with OpenAPI/Swagger through FastAPI.
+
+---
+
+# 13. Offline support
+
+This is worth implementing because of the target users.
+
+On Android:
+
+```text
+SQLite / local database
+```
+
+or a Flutter local-storage solution.
+
+Flow:
+
+```text
+No Internet
+     ↓
+Take photo
+     ↓
+Record voice
+     ↓
+Save locally
+     ↓
+Internet returns
+     ↓
+Upload automatically
+```
+
+We'll need:
+
+* local database
+* upload queue
+* retry mechanism
+* synchronization logic
+
+---
+
+# 14. Docker
+
+Docker will make our project much easier to run.
+
+We can have:
+
+```text
+docker-compose.yml
+```
+
+with:
+
+```text
+Backend
+PostgreSQL
+Redis
+```
+
+Potentially:
+
+```text
+┌─────────────────────────────┐
+│          Docker             │
+│                             │
+│ FastAPI                     │
+│ PostgreSQL                  │
+│ Redis                       │
+└─────────────────────────────┘
+```
+
+---
+
+# 15. Redis
+
+Not absolutely required for the first prototype, but useful.
+
+Use it for:
+
+* caching
+* background jobs
+* AI processing queues
+* rate limiting
+* temporary data
+
+For example:
+
+```text
+Upload image
+     ↓
+Queue
+     ↓
+AI processing
+     ↓
+Result
+```
+
+This prevents the mobile app from waiting for everything synchronously.
+
+---
+
+# 16. Background workers
+
+AI processing can take time.
+
+Instead of:
+
+```text
+Upload
+ ↓
+wait 30 seconds
+ ↓
+result
+```
+
+we can do:
+
+```text
+Upload
+ ↓
+Job created
+ ↓
+"Processing..."
+ ↓
+Worker
+ ↓
+AI
+ ↓
+Database
+ ↓
+Notification
+```
+
+Tools:
+
+```text
+Celery
++
+Redis
+```
+
+or a lighter async/background-job approach for the MVP.
+
+---
+
+# 17. Security tools
+
+Since we're handling:
+
+* phone numbers
+* user accounts
+* product information
+* images
+* orders
+
+security matters.
+
+Tools:
+
+### Backend
+
+```text
+Pydantic
+JWT
+bcrypt/Argon2
+CORS
+Rate limiting
+```
+
+### Testing
+
+```text
+OWASP ZAP
+Burp Suite
+Postman/Insomnia
+pytest
+```
+
+And we'll perform:
+
+```text
+Authentication testing
+Authorization testing
+API security testing
+File-upload testing
+Input validation
+```
+
+This is one place where your cybersecurity background can give the project an advantage.
+
+---
+
+# 18. GitHub
+
+Use Git from day one.
+
+Repository structure could be:
+
+```text
+artisan-ai/
+│
+├── mobile/
+│   └── Flutter app
+│
+├── backend/
+│   ├── app/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   └── ai/
+│
+├── web/
+│   └── Next.js dashboard
+│
+├── ml/
+│   ├── datasets/
+│   ├── notebooks/
+│   └── models/
+│
+├── infrastructure/
+│   ├── docker/
+│   └── nginx/
+│
+├── docs/
+│
+└── README.md
+```
+
+---
+
+# 19. Design tools
+
+For UI/UX:
+
+### Figma
+
+Design:
+
+```text
+Login
+Home
+Add Product
+Camera
+Voice
+AI Processing
+Product Preview
+Products
+Orders
+Profile
+```
+
+We should design the entire flow **before coding**.
+
+For SIH, a polished UI can make a huge difference.
+
+---
+
+# 20. Testing tools
+
+We'll need:
+
+### Mobile
+
+```text
+Android Emulator
+Real Android phone
+```
+
+### API
+
+```text
+Postman
+```
+
+### Backend
+
+```text
+pytest
+```
+
+### Security
+
+```text
+Burp Suite
+OWASP ZAP
+```
+
+### Database
+
+```text
+pgAdmin
+DBeaver
+```
+
+You don't need all of these simultaneously.
+
+---
+
+# 21. Deployment
+
+For the SIH prototype, we can deploy:
+
+```text
+Flutter APK
+        │
+        ▼
+      Users
+
+        │
+        ▼
+
+Cloud Server
+   ├── FastAPI
+   ├── PostgreSQL
+   ├── Redis
+   └── AI services
+
+        │
+        ▼
+
+Object Storage
+```
+
+Possible cloud options:
+
+* AWS
+* Google Cloud
+* Azure
+* Render
+* Railway
+* Supabase
+
+For a student hackathon, I'd keep the infrastructure **simple and inexpensive**.
+
+---
+
+# 22. AI resources we'll need
+
+This is probably the biggest external-resource requirement.
+
+We need access to:
+
+### 1. Vision model/service
+
+For:
+
+* image understanding
+* product detection
+* image enhancement
+
+### 2. Speech model
+
+For:
+
+```text
+Odia/Hindi/etc.
+ ↓
+Text
+```
+
+### 3. LLM
+
+For:
+
+```text
+Text
+ ↓
+Product catalog
+```
+
+### 4. Translation
+
+For:
+
+```text
+Regional language
+ ↓
+Hindi
+ ↓
+English
+```
+
+### 5. ML model
+
+For:
+
+```text
+Market information
+ ↓
+Price recommendation
+```
+
+We can choose cloud APIs or open-source models depending on cost, latency, and availability.
+
+---
+
+# 23. Data resources
+
+This is actually **as important as the AI models**.
+
+We need datasets containing things like:
+
+### Product data
+
+```text
+Category
+Material
+Region
+Craft
+Price
+```
+
+### Raw material data
+
+```text
+Cotton
+Silk
+Wood
+Bamboo
+Metal
+etc.
+```
+
+### Market data
+
+```text
+Product
+Price
+Date
+Region
+Demand
+```
+
+### Artisan data
+
+For demo purposes:
+
+```text
+Artisan
+Craft
+Location
+Products
+```
+
+We should distinguish clearly between **real government/market data** and **synthetic/demo data**.
+
+---
+
+# 24. What we DON'T need
+
+This is important.
+
+We don't need:
+
+❌ A dedicated GPU server
+❌ Training an LLM
+❌ Training a speech model
+❌ Training a computer-vision model from scratch
+❌ Kubernetes
+❌ Microservices everywhere
+❌ 10 different databases
+❌ Expensive AWS infrastructure
+❌ A massive dataset for the first prototype
+
+We should avoid overengineering.
+
+---
+
+# 25. Minimum hardware
+
+For the whole team:
+
+### Developer machine
+
+Your current system can handle:
+
+```text
+Flutter
+FastAPI
+PostgreSQL
+Docker
+VS Code
+Android Studio
+```
+
+16 GB RAM is workable.
+
+For AI, we'll primarily use APIs/cloud or lightweight models.
+
+### Testing devices
+
+At minimum:
+
+**1 Android phone**
+
+Ideally:
+
+```text
+Android phone 1 → normal modern device
+Android phone 2 → lower-end device
+```
+
+Because our target users may not have expensive phones.
+
+---
+
+# 26. Team roles
+
+If you have a team of 4–6, divide it like this:
+
+### 👨‍💻 Person 1 — Mobile
+
+Flutter:
+
+```text
+UI
+Camera
+Microphone
+Offline mode
+API integration
+```
+
+### 👨‍💻 Person 2 — Backend
+
+```text
+FastAPI
+PostgreSQL
+Authentication
+APIs
+Storage
+```
+
+### 🤖 Person 3 — AI/ML
+
+```text
+Speech
+LLM
+Image AI
+Pricing model
+```
+
+### 🌐 Person 4 — Web
+
+```text
+Admin dashboard
+Buyer marketplace
+Analytics
+```
+
+### 🔐 Person 5 — Security/DevOps
+
+```text
+API security
+Docker
+Deployment
+Testing
+CI/CD
+```
+
+### 🎨 Person 6 — UI/UX + presentation
+
+```text
+Figma
+UX
+Pitch deck
+Demo
+Documentation
+```
+
+One person can obviously handle multiple roles.
+
+---
+
+# 27. Our development environment
+
+I'd set up this exact environment:
+
+```text
+Arch Linux
+│
+├── VS Code
+├── Android Studio
+├── Flutter
+├── Python 3
+├── Node.js
+├── Git
+├── Docker
+│
+├── FastAPI
+├── PostgreSQL
+├── Redis
+│
+└── GitHub
+```
+
+Then:
+
+```text
+Flutter App
+     │
+     │ REST API
+     ▼
+FastAPI
+     │
+     ├── PostgreSQL
+     ├── Storage
+     ├── AI
+     └── Pricing ML
+```
+
+---
+
+# 28. The resources we should prepare BEFORE coding
+
+This is where I recommend we slow down.
+
+Before writing thousands of lines of code, we should prepare **7 things**:
+
+### 1. Requirements document
+
+Exactly what PS #90 requires.
+
+### 2. User journey
+
+```text
+Artisan
+ ↓
+Register
+ ↓
+Add Product
+ ↓
+Photo
+ ↓
+Voice
+ ↓
+AI
+ ↓
+Review
+ ↓
+Publish
+```
+
+### 3. UI wireframes
+
+Figma.
+
+### 4. Database schema
+
+```text
+Users
+Products
+Images
+Orders
+Buyers
+Prices
+```
+
+### 5. API specification
+
+Every endpoint.
+
+### 6. AI architecture
+
+Which model/service handles which task.
+
+### 7. Demo dataset
+
+Enough realistic products to demonstrate:
+
+```text
+Sarees
+Bags
+Handicrafts
+Wood products
+Textiles
+etc.
+```
+
+---
+
+# 29. Our complete resource checklist
+
+### 💻 Development
+
+* [ ] Arch Linux/Windows
+* [ ] VS Code
+* [ ] Android Studio
+* [ ] Flutter
+* [ ] Python
+* [ ] Node.js
+* [ ] Git
+* [ ] Docker
+
+### 📱 Mobile
+
+* [ ] Android phone
+* [ ] Camera
+* [ ] Microphone
+* [ ] Flutter packages
+
+### 🖥 Backend
+
+* [ ] FastAPI
+* [ ] PostgreSQL
+* [ ] SQLAlchemy
+* [ ] Redis
+* [ ] Object storage
+
+### 🤖 AI
+
+* [ ] Speech-to-text
+* [ ] LLM
+* [ ] Translation
+* [ ] Image processing
+* [ ] Background removal
+* [ ] Pricing ML
+
+### 🌐 Web
+
+* [ ] Next.js
+* [ ] TypeScript
+
+### 🔐 Security
+
+* [ ] JWT
+* [ ] Password/token hashing
+* [ ] Rate limiting
+* [ ] Input validation
+* [ ] Burp Suite
+* [ ] OWASP ZAP
+
+### 🎨 Design
+
+* [ ] Figma
+* [ ] Icons
+* [ ] Local-language UI assets
+
+### 📊 Data
+
+* [ ] Product dataset
+* [ ] Pricing dataset
+* [ ] Raw-material costs
+* [ ] Market data
+* [ ] Demo artisan data
+
+### 🚀 Deployment
+
+* [ ] Cloud server
+* [ ] Database
+* [ ] Object storage
+* [ ] Domain
+* [ ] HTTPS
+
+---
+
+## 🔥 And here's the important part, bro
+
+**Don't start installing 30 things yet.**
+
+Our next step should be to decide the **exact technology choices and architecture**.
+
+I'd suggest we lock it as:
+
+> **Flutter + FastAPI + PostgreSQL + Redis + Object Storage + AI APIs/Open-source models + XGBoost + Next.js + Docker**
+
+Then we can go through it **one component at a time**:
+
+**Step 1 → System architecture**
+**Step 2 → Database design**
+**Step 3 → API design**
+**Step 4 → Flutter UI**
+**Step 5 → Image AI**
+**Step 6 → Voice + multilingual AI**
+**Step 7 → Pricing engine**
+**Step 8 → B2B marketplace**
+**Step 9 → Security**
+**Step 10 → Deployment + SIH demo**
+
+That gives us a realistic path from **PS #90 → working prototype**, rather than randomly starting to code.

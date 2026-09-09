@@ -1,0 +1,26 @@
+SIH Problem Statement #90: Project Memory & Progress Log
+
+=== COMPLETED STAGES ===
+- Stage 1: Mono-repo Architecture (backend, mobile, docs, infrastructure)
+- Stage 2: Database Foundation (FastAPI + SQLAlchemy 2.x + PostgreSQL/SQLite fallback + Alembic + 4 models + Cascade delete-orphan + Numeric(12,2) Decimal precision)
+- Stage 3: Product REST API (POST, GET with pagination/filtering, GET /id, PUT /id with immutable ownership, DELETE /id with image cascades, health checks)
+- Stage 4: Flutter Mobile App Foundation (Mobile architecture, 10.0.2.2 emulator networking, monetary decimal precision, Home, Products, Add Product, Product Detail/Edit screens, ProductService, test suite)
+
+=== TEST SUITE STATUS ===
+- 28 / 28 Backend Pytest Tests PASSING
+
+=== QUICK RUN COMMANDS ===
+Backend:
+  cd /home/amit/github/SIH
+  source backend/.venv/bin/activate
+  PYTHONPATH=. uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+  Swagger Docs: http://localhost:8000/docs
+
+Backend Tests:
+  PYTHONPATH=. pytest backend/tests -v
+
+Flutter:
+  cd /home/amit/github/SIH/mobile
+  flutter pub get
+  flutter run
+  flutter test
