@@ -1,16 +1,19 @@
-# 🏺 Artisan Studio AI — SIH 2026 Problem Statement #90
+# 🏺 Artisan AI — SIH 2026 Production Hardened Architecture
 > **PS Number**: SIH26090  
-> **Theme**: AI-driven digital commerce platform for marginalized artisans & micro-entrepreneurs.  
-> **Core Concept**: `PHOTO ➔ SPEAK ➔ AI PROCESSES ➔ REVIEW ➔ PUBLISH` (Zero digital literacy barrier).
+> **Theme**: AI-driven digital commerce and catalog management platform for grassroots artisans.  
+> **Core Workflow**: `PHOTO ➔ SPEAK ➔ PROCESS ➔ REVIEW/EDIT ➔ PUBLISH`
 
 ---
 
-## 🌟 Solution Architecture & Implemented Stages (1 – 12)
+## 🌟 System Architecture
 
 ```
                        ┌────────────────────────────────────────────────────────┐
                        │                   ARTISAN MOBILE APP                   │
                        │           (Flutter 3.x / Dart / Android)               │
+                       │   • flutter_secure_storage session persistence         │
+                       │   • record package for real microphone recording       │
+                       │   • Offline JSON Sync queue with restart persistence   │
                        └──────────────────────────┬─────────────────────────────┘
                                                   │
                                  REST / JSON / Multipart HTTP (10s Timeout)
@@ -18,15 +21,19 @@
                        ┌──────────────────────────▼─────────────────────────────┐
                        │                FASTAPI BACKEND CORE                    │
                        │   (Python 3.14 / Pydantic v2 / SQLAlchemy 2.0 ORM)     │
+                       │   • Server-side IDOR ownership checks                  │
+                       │   • Role-based Admin authorization (`role == admin`)   │
+                       │   • Magic-byte & MIME audio/image upload security      │
+                       │   • Strict Production SECRET_KEY validation            │
                        └─────┬──────────────┬──────────────┬──────────────┬─────┘
                              │              │              │              │
        ┌─────────────────────┼──────────────┼──────────────┼──────────────┼─────────────────────┐
        │                     │              │              │              │                     │
 ┌──────▼──────┐       ┌──────▼──────┐ ┌─────▼─────┐ ┌──────▼──────┐ ┌─────▼─────┐       ┌──────▼──────┐
-│  AI Image   │       │  AI Voice   │ │  Dynamic  │ │ Marketplace │ │  Offline  │       │  Web Admin  │
-│   Studio    │       │ Cataloger   │ │  Pricing  │ │  & Inquiries│ │Sync Queue │       │  Dashboard  │
-│ (1024x1024  │       │(Vernacular  │ │ (Living   │ │ (ONDC / GeM │ │(Idempotent│       │ (Analytics &│
-│ Chroma/BG)  │       │ Fact Match) │ │  Wage/COGS│ │ Interoper.) │ │Batch Sync)│       │ Supervison) │
+│  AI Image   │       │ SpeechToText│ │ Cost-Plus │ │ Marketplace │ │  Offline  │       │  Web Admin  │
+│   Studio    │       │   Service   │ │  Pricing  │ │  & Inquiries│ │Sync Queue │       │  Dashboard  │
+│ (1024x1024  │       │(LocalWhisper│ │ Benchmark │ │  (ONDC/GeM  │ │(Persisted │       │ (Role-Auth  │
+│ Chroma/BG)  │       │ Provider)   │ │ Assistant)│ │ JSON Export)│ │Batch Sync)│       │ Inquiries)  │
 └──────┬──────┘       └──────┬──────┘ └─────┬─────┘ └──────┬──────┘ └─────┬─────┘       └──────┬──────┘
        │                     │              │              │              │                    │
        └─────────────────────┴──────────────┼──────────────┴──────────────┴────────────────────┘
@@ -39,62 +46,94 @@
 
 ---
 
-## 🚀 Key Feature Modules
+## 📋 Feature Classification & Verification Status
 
-| Module | Purpose & Artisan Impact | Endpoints / Screens |
+| Module | Classification | Status Details |
 | :--- | :--- | :--- |
-| **1. Product Foundation** | High-precision catalog management with zero floating-point arithmetic errors. | `POST /products`, `GET /products`, `HomeScreen`, `ProductsScreen` |
-| **2. AI Image Studio** | Converts raw phone photos into 1024x1024 studio-quality catalog shots with background removal & centering. | `POST /ai/images/enhance`, `ImageStudioScreen` |
-| **3. Voice Cataloger** | Speech-to-text in Indian vernaculars, strict anti-hallucination fact isolation, bilingual Hindi/English copy. | `POST /ai/catalog/transcribe`, `POST /ai/catalog/generate`, `VoiceCatalogScreen` |
-| **4. Dynamic Pricing Assistant** | Transparent cost calculation ($M + L + O + P$), living wage baseline (₹90/hr), and 3-tier price cards. | `POST /ai/pricing/calculate`, `PricingCalculatorScreen` |
-| **5. Marketplace & B2B Leads** | Public discovery feed, RFQ wholesale lead inbox with status management (`Contacted`, `Accepted`, `Declined`). | `GET /marketplace/products`, `POST /products/{id}/inquiries`, `InquiriesScreen` |
-| **6. ONDC & GeM Interoperability** | One-click protocol export compliant with Beckn / ONDC retail and GeM public procurement schemas. | `GET /marketplace/export/ondc/{id}`, `GET /marketplace/export/gem/{id}` |
-| **7. Simple Auth & Profiles** | Mobile phone SMS OTP authentication with 1-tap SIH Evaluator quick login and verified artisan profile cards. | `POST /auth/otp/send`, `POST /auth/otp/verify`, `LoginScreen` |
-| **8. Offline-First Sync** | Idempotent batch action queue with client UUID deduplication for low-connectivity craft clusters. | `POST /sync/batch`, `GET /sync/delta`, `SyncService` |
-| **9. Web Admin Portal** | Responsive dashboard for cooperative supervisors and evaluators with live analytics and protocol modals. | `GET /admin/stats`, `GET /admin/portal` |
+| **Authentication & Session Persistence** | `WORKING` | Mobile phone OTP auth with `flutter_secure_storage` persistence across app restarts. Unauthenticated access yields 401. |
+| **Admin Inquiries & Authorization** | `WORKING` | Server-side role enforcement on `GET /admin/inquiries` (`401` if unauthenticated, `403` if non-admin, `200` for admin). Admin portal sends Bearer token. |
+| **IDOR Resource Protection** | `WORKING` | Strict artisan ownership checks on `PUT /products/{id}`, `DELETE /products/{id}`, and `GET /artisans/{id}/inquiries`. |
+| **Audio Upload & Validation** | `WORKING` | 10 MB limit, randomized filenames, temporary file cleanup, magic byte header verification for WAV, MP3, M4A, AAC, WEBM, OGG, FLAC. |
+| **Local Whisper STT** | `WORKING` | `SpeechToTextService` abstraction with `LocalWhisperProvider`. Returns explicit `503 LOCAL_STT_MODEL_UNAVAILABLE` when unconfigured. No fake STT fallback. |
+| **Voice Recording (Flutter)** | `WORKING` | Real microphone capture with `record` package, permission handling, recording timer, cancellation, and audio upload to `/ai/transcribe`. |
+| **Offline Sync Queue** | `WORKING` | Persistent JSON queue surviving app kill/restarts. Idempotent batch sync to `/sync/batch`. |
+| **Cost-Plus Pricing Calculator** | `WORKING / HEURISTIC` | Deterministic cost breakdown ($M + L + O + P$) + regional benchmark reference. *Not an ML model*. |
+| **Multilingual Catalog Generator** | `WORKING / HEURISTIC` | Rule-based entity extraction and template generation based strictly on verified inputs to prevent hallucination. |
+| **ONDC / GeM Export** | `WORKING / HEURISTIC` | Generates compliant ONDC Beckn and GeM JSON payloads for export. *Not a live ONDC network connection*. |
+| **Image Studio** | `WORKING` | Transparent background removal and 1024x1024 centering with magic byte upload validation. |
+| **Camera & Gallery Shortcut** | `WORKING` | Direct camera capture / gallery picker shortcuts feeding into Image Studio pipeline. |
 
 ---
 
-## 🧪 Automated Verification & Test Metrics
+## 🧪 Automated Test Results
 
-- **Backend Pytest Test Suite**: **70 / 70 tests passing (100%)**
-- **Flutter Mobile Test Suite**: **32 / 32 tests passing (100%)**
-- **Static Analysis**: `flutter analyze` ➔ **0 issues found**
-- **Physical Device Deployment**: Installed on **moto g54 5G** (`ZD222H7659`) via `adb install -r`.
+- **Backend Pytest Suite**: **100 / 100 tests passing (100%)**
+- **Flutter Mobile Suite**: **51 / 51 tests passing (100%)**
+- **Flutter Analyzer**: **0 issues found**
 
 ---
 
-## 💻 Quick Start & Run Commands
+## 🔒 Security Configuration
 
-### 1. Start Database & Backend
+### Production Secret Key
+In `production` mode (`ENVIRONMENT=production`), the application validates `SECRET_KEY` and refuses to start if it is missing, default, or fewer than 32 characters.
+
+### Demo OTP Security
+- When `AUTH_DEMO_MODE=true` (development/evaluation): Demo OTP `123456` is enabled and returned for evaluator convenience.
+- When `AUTH_DEMO_MODE=false` (production): OTP is cryptographically generated, time-limited, single-use, attempt-limited, constant-time compared, and **never returned in API responses or logs**.
+
+### CORS Configuration
+Configurable via `CORS_ORIGINS` environment variable (comma-separated list of allowed origins).
+
+---
+
+## 🎙️ Local Whisper Setup
+
+To enable local speech-to-text recognition with Whisper:
+
+1. Install local Whisper / faster-whisper in the Python environment:
+   ```bash
+   pip install openai-whisper
+   # OR
+   pip install faster-whisper
+   ```
+2. Set the model path or model size in `.env`:
+   ```env
+   WHISPER_MODEL_PATH=base
+   # OR path to local model weights:
+   # WHISPER_MODEL_PATH=/path/to/whisper/model
+   ```
+3. If Whisper is not installed or the model is not found, `/ai/transcribe` safely returns:
+   ```json
+   {
+     "success": false,
+     "error": "LOCAL_STT_MODEL_UNAVAILABLE",
+     "message": "Local Speech-to-Text (Whisper) is not configured or available."
+   }
+   ```
+   The mobile app displays a clear notification to the user.
+
+---
+
+## 💻 Quick Start Commands
+
+### 1. Database & Backend
 ```bash
 cd /home/amit/github/SIH
 docker-compose up -d
 source backend/.venv/bin/activate
 PYTHONPATH=. uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-- 📖 **Interactive Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- 📊 **Web Admin Portal**: [http://localhost:8000/admin/portal](http://localhost:8000/admin/portal)
 
-### 2. Run Backend Tests
+### 2. Run All Backend Tests
 ```bash
-cd /home/amit/github/SIH
-source backend/.venv/bin/activate
-PYTHONPATH=. pytest backend/tests -v
+PYTHONPATH=. backend/.venv/bin/pytest backend/tests -v
 ```
 
-### 3. Run or Build Mobile App (Android)
+### 3. Run All Flutter Tests & Analyzer
 ```bash
 cd /home/amit/github/SIH/mobile
 export PATH="/home/amit/development/flutter/bin:$PATH"
-
-# Run tests
 flutter test
 flutter analyze
-
-# Build & Run on connected Android device:
-flutter run -d ZD222H7659 --dart-define=API_BASE_URL=http://<YOUR_LAN_IP>:8000
-
-# Build APK:
-flutter build apk --debug --dart-define=API_BASE_URL=http://<YOUR_LAN_IP>:8000
 ```

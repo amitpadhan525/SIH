@@ -9,62 +9,15 @@ from backend.app.models.product import Product
 from backend.app.models.product_image import ProductImage
 
 
-@pytest.fixture
-def sample_artisan(db_session: Session) -> Artisan:
-    user = User(
-        name="Sunita Devi",
-        phone="+919811122233",
-        role="artisan",
-        language="hi",
-        location="Madhubani, Bihar",
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-
-    artisan = Artisan(
-        user_id=user.id,
-        craft_type="Madhubani Painting",
-    )
-    db_session.add(artisan)
-    db_session.commit()
-    db_session.refresh(artisan)
-    return artisan
-
-
-@pytest.fixture
-def second_artisan(db_session: Session) -> Artisan:
-    user = User(
-        name="Gopal Das",
-        phone="+919844455566",
-        role="artisan",
-        language="hi",
-        location="Khurja, UP",
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-
-    artisan = Artisan(
-        user_id=user.id,
-        craft_type="Ceramic Pottery",
-    )
-    db_session.add(artisan)
-    db_session.commit()
-    db_session.refresh(artisan)
-    return artisan
-
-
-def test_create_product_success(client: TestClient, sample_artisan: Artisan):
+def test_create_product_success(client: TestClient, sample_artisan: Artisan, auth_headers: dict):
     payload = {
-        "artisan_id": sample_artisan.id,
         "name": "Handmade Cotton Bag",
         "category": "Handicraft",
         "description": "Traditional handmade cotton bag",
         "material": "Cotton",
         "price": "650.50",
     }
-    response = client.post("/products", json=payload)
+    response = client.post("/products", json=payload, headers=auth_headers)
     assert response.status_code == 201
     data = response.json()
 
@@ -80,62 +33,56 @@ def test_create_product_success(client: TestClient, sample_artisan: Artisan):
     assert "updated_at" in data
 
 
-def test_create_product_with_explicit_status(client: TestClient, sample_artisan: Artisan):
+def test_create_product_with_explicit_status(client: TestClient, sample_artisan: Artisan, auth_headers: dict):
     payload = {
-        "artisan_id": sample_artisan.id,
         "name": "Madhubani Wall Frame",
         "category": "Paintings",
         "price": "1200.00",
         "status": "published",
     }
-    response = client.post("/products", json=payload)
+    response = client.post("/products", json=payload, headers=auth_headers)
     assert response.status_code == 201
     data = response.json()
     assert data["status"] == "published"
 
 
-def test_create_product_invalid_artisan(client: TestClient):
+def test_create_product_unauthenticated(client: TestClient):
     payload = {
-        "artisan_id": 999999,
-        "name": "Nonexistent Artisan Product",
+        "name": "Anonymous Product",
         "category": "Handicraft",
         "price": "500.00",
     }
     response = client.post("/products", json=payload)
-    assert response.status_code == 404
-    assert "Artisan with id 999999 not found" in response.json()["detail"]
+    assert response.status_code == 401
 
 
-def test_create_product_invalid_price_negative(client: TestClient, sample_artisan: Artisan):
+def test_create_product_invalid_price_negative(client: TestClient, sample_artisan: Artisan, auth_headers: dict):
     payload = {
-        "artisan_id": sample_artisan.id,
         "name": "Negative Price Product",
         "category": "Handicraft",
         "price": "-100.00",
     }
-    response = client.post("/products", json=payload)
+    response = client.post("/products", json=payload, headers=auth_headers)
     assert response.status_code == 422
 
 
-def test_create_product_invalid_name_empty(client: TestClient, sample_artisan: Artisan):
+def test_create_product_invalid_name_empty(client: TestClient, sample_artisan: Artisan, auth_headers: dict):
     payload = {
-        "artisan_id": sample_artisan.id,
         "name": "   ",
         "category": "Handicraft",
         "price": "100.00",
     }
-    response = client.post("/products", json=payload)
+    response = client.post("/products", json=payload, headers=auth_headers)
     assert response.status_code == 422
 
 
-def test_create_product_invalid_status(client: TestClient, sample_artisan: Artisan):
+def test_create_product_invalid_status(client: TestClient, sample_artisan: Artisan, auth_headers: dict):
     payload = {
-        "artisan_id": sample_artisan.id,
         "name": "Invalid Status Product",
         "category": "Handicraft",
         "status": "invalid_status",
     }
-    response = client.post("/products", json=payload)
+    response = client.post("/products", json=payload, headers=auth_headers)
     assert response.status_code == 422
 
 
@@ -251,7 +198,7 @@ def test_get_single_product_not_found(client: TestClient):
     assert res.json()["detail"] == "Product not found"
 
 
-def test_update_product_success(client: TestClient, sample_artisan: Artisan, db_session: Session):
+def test_update_product_success(client: TestClient, sample_artisan: Artisan, auth_headers: dict, db_session: Session):
     product = Product(
         artisan_id=sample_artisan.id,
         name="Original Title",
@@ -269,7 +216,7 @@ def test_update_product_success(client: TestClient, sample_artisan: Artisan, db_
         "status": "published",
         "description": "Updated new description",
     }
-    res = client.put(f"/products/{product.id}", json=update_payload)
+    res = client.put(f"/products/{product.id}", json=update_payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["name"] == "Updated Title"
@@ -279,14 +226,14 @@ def test_update_product_success(client: TestClient, sample_artisan: Artisan, db_
     assert data["category"] == "Craft"  # Unchanged
 
 
-def test_update_product_not_found(client: TestClient):
-    res = client.put("/products/999999", json={"name": "New Name"})
+def test_update_product_not_found(client: TestClient, auth_headers: dict):
+    res = client.put("/products/999999", json={"name": "New Name"}, headers=auth_headers)
     assert res.status_code == 404
     assert res.json()["detail"] == "Product not found"
 
 
 def test_update_product_disallows_ownership_change(
-    client: TestClient, sample_artisan: Artisan, second_artisan: Artisan, db_session: Session
+    client: TestClient, sample_artisan: Artisan, second_artisan: Artisan, auth_headers: dict, db_session: Session
 ):
     product = Product(
         artisan_id=sample_artisan.id,
@@ -303,7 +250,7 @@ def test_update_product_disallows_ownership_change(
         "artisan_id": second_artisan.id,
         "name": "Hijacked Item Name",
     }
-    res = client.put(f"/products/{product.id}", json=payload)
+    res = client.put(f"/products/{product.id}", json=payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["artisan_id"] == sample_artisan.id  # Unaltered!
@@ -311,7 +258,7 @@ def test_update_product_disallows_ownership_change(
 
 
 def test_delete_product_success_and_cascade_images(
-    client: TestClient, sample_artisan: Artisan, db_session: Session
+    client: TestClient, sample_artisan: Artisan, auth_headers: dict, db_session: Session
 ):
     product = Product(
         artisan_id=sample_artisan.id,
@@ -335,7 +282,7 @@ def test_delete_product_success_and_cascade_images(
     image_id = image.id
 
     # Delete product
-    res = client.delete(f"/products/{product_id}")
+    res = client.delete(f"/products/{product_id}", headers=auth_headers)
     assert res.status_code == 204
 
     # Verify 404 upon GET
@@ -347,7 +294,7 @@ def test_delete_product_success_and_cascade_images(
     assert db_session.get(ProductImage, image_id) is None
 
 
-def test_delete_product_not_found(client: TestClient):
-    res = client.delete("/products/999999")
+def test_delete_product_not_found(client: TestClient, auth_headers: dict):
+    res = client.delete("/products/999999", headers=auth_headers)
     assert res.status_code == 404
     assert res.json()["detail"] == "Product not found"

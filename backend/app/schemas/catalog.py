@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class TranscriptionResponse(BaseModel):
     transcript: str = Field(..., description="Transcribed text from speech")
     detected_language: str = Field(..., description="Detected language code (e.g., 'hi', 'or', 'bn', 'en')")
-    confidence: float = Field(default=0.95, ge=0.0, le=1.0, description="Confidence score")
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Confidence score")
     duration_seconds: float = Field(default=0.0, ge=0.0, description="Audio duration in seconds")
 
 

@@ -359,11 +359,28 @@
     <!-- TAB 4: MARKETPLACE DISCOVERY -->
     <div id="tab-marketplace" class="tab-content" style="display: none;">
       <div class="content-card">
-        <div class="card-header">
-          <h2 class="card-title">Public Discovery Feed</h2>
-          <span class="badge badge-published">Live Feed</span>
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 class="card-title">🌐 Buyer Discovery Marketplace</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Discover authentic verified Indian handicraft products directly from rural artisans.</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="marketSearchInput" placeholder="🔍 Search craft or material..." onkeyup="filterMarketplace()" style="padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; min-width: 240px;" />
+            <select id="marketCategorySelect" onchange="filterMarketplace()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: white;">
+              <option value="">All Categories</option>
+              <option value="Handloom">Handloom & Textiles</option>
+              <option value="Pottery">Pottery & Ceramics</option>
+              <option value="Metal">Metal Craft / Dokra</option>
+              <option value="Painting">Tribal & Folk Art</option>
+              <option value="Wood">Woodcraft</option>
+              <option value="Bamboo">Bamboo & Cane</option>
+              <option value="Jewelry">Traditional Jewelry</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="filterMarketplace()">Filter</button>
+          </div>
         </div>
-        <div id="discovery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+
+        <div id="discovery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 16px;">
           <!-- Populated by JS -->
         </div>
       </div>
@@ -375,14 +392,110 @@
     <div class="modal">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h3 id="modalTitle" style="font-family: Outfit; font-size: 18px;">Protocol Export</h3>
-        <button class="btn btn-outline btn-sm" onclick="closeModal()">✕ Close</button>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('protocolModal')">✕ Close</button>
       </div>
       <p style="font-size: 13px; color: var(--text-muted);" id="modalDesc">Standard protocol payload for e-commerce interoperability.</p>
       <pre id="modalJson">Loading payload...</pre>
     </div>
   </div>
 
+  <!-- BUYER PRODUCT DETAILS MODAL -->
+  <div class="modal-overlay" id="productDetailsModal">
+    <div class="modal" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 id="detailTitle" style="font-family: Outfit; font-size: 20px; color: var(--text-main);">Product Details</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('productDetailsModal')">✕ Close</button>
+      </div>
+      <div id="detailImageContainer" style="margin-bottom: 16px; border-radius: 10px; overflow: hidden; background: #F1F5F9; max-height: 260px; text-align: center;">
+        <!-- Image rendered here -->
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="badge badge-published" id="detailCategory">Category</span>
+        <span style="font-size: 22px; font-weight: 800; color: var(--primary);" id="detailPrice">₹--</span>
+      </div>
+      <p style="font-size: 14px; color: var(--text-main); line-height: 1.5; margin-bottom: 16px;" id="detailDescription"></p>
+      
+      <!-- Safe Public Artisan Info Card -->
+      <div style="background: #F8FAFC; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 16px;">🎨</span>
+          <strong style="font-size: 14px; color: var(--text-main);" id="detailArtisanName">Artisan Name</strong>
+          <span class="badge badge-published" style="font-size: 10px;">Verified Creator</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;" id="detailArtisanMeta">
+          Craft: Handloom • Location: Odisha, India
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-outline" onclick="closeModal('productDetailsModal')">Close</button>
+        <button class="btn btn-primary" id="detailInquireBtn">💼 Send Business Inquiry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUYER BUSINESS INQUIRY MODAL -->
+  <div class="modal-overlay" id="inquiryModal">
+    <div class="modal" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-family: Outfit; font-size: 18px; color: var(--text-main);">Send Business Inquiry</h3>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('inquiryModal')">✕ Close</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="inquiryProductSummary">
+        Sending direct procurement inquiry to the artisan.
+      </p>
+
+      <form id="inquiryForm" onsubmit="submitInquiryForm(event)" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="inqProductId" />
+        
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Your Full Name / Business *</label>
+          <input type="text" id="inqBuyerName" required placeholder="e.g., Priya Sharma (FabIndia Buyer)" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Email Address *</label>
+            <input type="email" id="inqBuyerEmail" required placeholder="priya@company.com" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Phone Number *</label>
+            <input type="text" id="inqBuyerPhone" required placeholder="+91 98765 43210" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Buyer Type</label>
+            <select id="inqBuyerType" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white;">
+              <option value="wholesale_b2b">Wholesale / Retailer</option>
+              <option value="export">International Exporter</option>
+              <option value="institutional">Corporate / Gifting</option>
+              <option value="retail">Individual / Collector</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Order Quantity (Units) *</label>
+            <input type="number" id="inqQuantity" min="1" value="10" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Requirement / Message</label>
+          <textarea id="inqMessage" rows="3" placeholder="Tell the artisan about your required delivery timeline, custom specifications, or packaging requirements..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('inquiryModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="inqSubmitBtn">Submit Inquiry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
+    let globalMarketplaceProducts = [];
+
     async function loadAllData() {
       try {
         // 1. Stats
@@ -418,7 +531,7 @@
           }
         }
 
-        // 2. Products
+        // 2. Products Table
         const prodRes = await fetch('/products');
         const products = await prodRes.json();
         const prodTbody = document.getElementById('products-table-body');
@@ -443,69 +556,221 @@
           `;
         });
 
-        // 3. Inquiries
-        const inqRes = await fetch('/artisans/1/inquiries');
-        const inquiries = await inqRes.json();
+        // 3. Inquiries (Admin Authorized)
+        const adminToken = localStorage.getItem('artisan_admin_token') || '';
+        const inqRes = await fetch('/admin/inquiries', {
+          headers: adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}
+        });
+
         const inqTbody = document.getElementById('inquiries-table-body');
-        document.getElementById('inquiries-count-badge').innerText = `${inquiries.length} Leads`;
-        inqTbody.innerHTML = '';
-        inquiries.forEach(inq => {
-          inqTbody.innerHTML += `
+        const inqBadge = document.getElementById('inquiries-count-badge');
+
+        if (inqRes.status === 401 || inqRes.status === 403) {
+          inqBadge.innerText = 'Auth Required';
+          inqBadge.className = 'badge badge-draft';
+          inqTbody.innerHTML = `
             <tr>
-              <td>#${inq.id}</td>
-              <td>
-                <strong>${inq.buyer_name}</strong>
-                <div style="font-size: 11px; color: var(--text-muted);">${inq.buyer_phone}</div>
-              </td>
-              <td>${inq.buyer_type}</td>
-              <td><strong>${inq.quantity} units</strong></td>
-              <td><span class="badge badge-${inq.status}">${inq.status}</span></td>
-              <td>
-                <button class="btn btn-primary btn-sm" onclick="updateInqStatus(${inq.id}, 'contacted')">Contact</button>
-                <button class="btn btn-outline btn-sm" onclick="updateInqStatus(${inq.id}, 'accepted')">Accept</button>
+              <td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted);">
+                <div style="font-weight: 700; color: var(--primary); font-size: 15px; margin-bottom: 6px;">🔒 Admin Authorization Required</div>
+                <div style="font-size: 12px; margin-bottom: 14px;">Accessing cross-artisan wholesale inquiries requires an authenticated administrator session.</div>
+                <div style="display: flex; justify-content: center; gap: 8px; max-width: 480px; margin: 0 auto;">
+                  <input type="text" id="adminTokenInput" placeholder="Paste Admin JWT Bearer Token" style="flex: 1; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;" />
+                  <button class="btn btn-primary btn-sm" onclick="saveAdminToken()">Save Token</button>
+                  <button class="btn btn-outline btn-sm" onclick="loginDemoAdmin()">Quick Demo Admin</button>
+                </div>
               </td>
             </tr>
           `;
-        });
+        } else if (inqRes.ok) {
+          const inqData = await inqRes.json();
+          const inquiries = inqData.inquiries || [];
+          inqBadge.innerText = `${inquiries.length} Leads`;
+          inqBadge.className = 'badge badge-pending';
+          inqTbody.innerHTML = '';
+          if (inquiries.length === 0) {
+            inqTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">No buyer inquiries recorded yet.</td></tr>`;
+          } else {
+            inquiries.forEach(inq => {
+              inqTbody.innerHTML += `
+                <tr>
+                  <td>#${inq.id}</td>
+                  <td>
+                    <strong>${inq.buyer_name}</strong>
+                    <div style="font-size: 11px; color: var(--text-muted);">${inq.buyer_phone} • ${inq.buyer_email}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600;">${inq.product_name || 'Product #' + inq.product_id}</div>
+                    <div style="font-size: 11px; color: var(--primary);">${inq.artisan_name ? 'Artisan: ' + inq.artisan_name : ''}</div>
+                  </td>
+                  <td><strong>${inq.quantity} units</strong></td>
+                  <td><span class="badge badge-${inq.status}">${inq.status}</span></td>
+                  <td>
+                    <button class="btn btn-primary btn-sm" onclick="updateInqStatus(${inq.id}, 'contacted')">Contact</button>
+                    <button class="btn btn-outline btn-sm" onclick="updateInqStatus(${inq.id}, 'accepted')">Accept</button>
+                  </td>
+                </tr>
+              `;
+            });
+          }
+        }
 
         // 4. Discovery Feed
         const discRes = await fetch('/marketplace/products');
         const discData = await discRes.json();
-        const discGrid = document.getElementById('discovery-grid');
-        discGrid.innerHTML = '';
-        const productList = Array.isArray(discData) ? discData : (discData.products || []);
-        if (productList.length === 0) {
-          discGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px;">No published products available in public marketplace feed yet.</div>';
-        } else {
-          productList.forEach(p => {
-            discGrid.innerHTML += `
-              <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span class="badge badge-published">${p.category}</span>
-                    <span style="font-size: 12px; color: var(--text-muted);">Artisan #${p.artisan_id}</span>
-                  </div>
-                  <h4 style="font-family: Outfit; font-size: 16px; margin-bottom: 6px;">${p.name}</h4>
-                  <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">${p.description || 'Authentic traditional Indian handicraft.'}</p>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
-                  <span style="font-size: 18px; font-weight: 800; color: var(--primary);">₹${p.price}</span>
-                  <button class="btn btn-primary btn-sm" onclick="alert('Wholesale lead inquiry modal opened for '+${p.id})">Inquire B2B</button>
-                </div>
-              </div>
-            `;
-          });
-        }
+        globalMarketplaceProducts = Array.isArray(discData) ? discData : (discData.products || []);
+        renderMarketplaceGrid(globalMarketplaceProducts);
 
       } catch (err) {
         console.error('Error loading data:', err);
       }
     }
 
+    function renderMarketplaceGrid(products) {
+      const discGrid = document.getElementById('discovery-grid');
+      discGrid.innerHTML = '';
+      if (products.length === 0) {
+        discGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px;">No matching published crafts found.</div>';
+        return;
+      }
+      products.forEach(p => {
+        const imgUrl = (p.image_urls && p.image_urls.length > 0) ? p.image_urls[0] : '';
+        const imgTag = imgUrl
+          ? `<img src="${imgUrl}" alt="${p.name}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;" />`
+          : `<div style="width: 100%; height: 120px; background: #FFF3E0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 32px; margin-bottom: 10px;">🏺</div>`;
+
+        discGrid.innerHTML += `
+          <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm);">
+            <div>
+              ${imgTag}
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                <span class="badge badge-published">${p.category}</span>
+                <span style="font-size: 11px; color: var(--text-muted);">${p.artisan_location || 'India'}</span>
+              </div>
+              <h4 style="font-family: Outfit; font-size: 16px; margin-bottom: 4px; color: var(--text-main);">${p.name}</h4>
+              <p style="font-size: 12px; color: var(--primary); font-weight: 600; margin-bottom: 6px;">By ${p.artisan_name || 'Traditional Artisan'}</p>
+              <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${p.description || 'Authentic handcrafted traditional product.'}</p>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+              <span style="font-size: 18px; font-weight: 800; color: var(--primary);">₹${parseFloat(p.price || 0).toLocaleString('en-IN')}</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-outline btn-sm" onclick="openProductDetails(${p.id})">Details</button>
+                <button class="btn btn-primary btn-sm" onclick="openInquiryModal(${p.id}, '${escapeHtml(p.name)}', ${p.price || 0})">Inquire</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function filterMarketplace() {
+      const q = document.getElementById('marketSearchInput').value.toLowerCase().trim();
+      const cat = document.getElementById('marketCategorySelect').value.toLowerCase().trim();
+
+      const filtered = globalMarketplaceProducts.filter(p => {
+        const matchesQuery = !q || (p.name && p.name.toLowerCase().includes(q)) || (p.material && p.material.toLowerCase().includes(q)) || (p.description && p.description.toLowerCase().includes(q)) || (p.artisan_name && p.artisan_name.toLowerCase().includes(q));
+        const matchesCat = !cat || (p.category && p.category.toLowerCase().includes(cat));
+        return matchesQuery && matchesCat;
+      });
+
+      renderMarketplaceGrid(filtered);
+    }
+
+    async function openProductDetails(productId) {
+      try {
+        const res = await fetch(`/marketplace/products/${productId}`);
+        if (!res.ok) {
+          alert('Could not load product details.');
+          return;
+        }
+        const p = await res.json();
+        document.getElementById('detailTitle').innerText = p.name;
+        document.getElementById('detailCategory').innerText = p.category;
+        document.getElementById('detailPrice').innerText = '₹' + parseFloat(p.price || 0).toLocaleString('en-IN');
+        document.getElementById('detailDescription').innerText = p.description || 'Handcrafted using traditional indigenous artisanal methods.';
+        document.getElementById('detailArtisanName').innerText = p.artisan_name || 'Traditional Artisan';
+        document.getElementById('detailArtisanMeta').innerText = `Craft: ${p.craft_type || p.category} • Location: ${p.artisan_district ? p.artisan_district + ', ' : ''}${p.artisan_state || p.artisan_location || 'India'}`;
+
+        const imgContainer = document.getElementById('detailImageContainer');
+        if (p.image_urls && p.image_urls.length > 0) {
+          imgContainer.innerHTML = `<img src="${p.image_urls[0]}" alt="${p.name}" style="width: 100%; height: 240px; object-fit: contain;" />`;
+          imgContainer.style.display = 'block';
+        } else {
+          imgContainer.style.display = 'none';
+        }
+
+        document.getElementById('detailInquireBtn').onclick = () => {
+          closeModal('productDetailsModal');
+          openInquiryModal(p.id, p.name, p.price || 0);
+        };
+
+        document.getElementById('productDetailsModal').style.display = 'flex';
+      } catch (e) {
+        alert('Error loading product details: ' + e);
+      }
+    }
+
+    function openInquiryModal(productId, productName, price) {
+      document.getElementById('inqProductId').value = productId;
+      document.getElementById('inquiryProductSummary').innerText = `Submitting B2B / wholesale procurement inquiry for: "${productName}" (₹${parseFloat(price).toLocaleString('en-IN')} / unit)`;
+      document.getElementById('inquiryModal').style.display = 'flex';
+    }
+
+    async function submitInquiryForm(event) {
+      event.preventDefault();
+      const productId = document.getElementById('inqProductId').value;
+      const buyerName = document.getElementById('inqBuyerName').value.trim();
+      const buyerEmail = document.getElementById('inqBuyerEmail').value.trim();
+      const buyerPhone = document.getElementById('inqBuyerPhone').value.trim();
+      const buyerType = document.getElementById('inqBuyerType').value;
+      const quantity = parseInt(document.getElementById('inqQuantity').value, 10) || 1;
+      const message = document.getElementById('inqMessage').value.trim();
+
+      const btn = document.getElementById('inqSubmitBtn');
+      btn.disabled = true;
+      btn.innerText = 'Sending...';
+
+      try {
+        const res = await fetch(`/products/${productId}/inquiries`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            buyer_name: buyerName,
+            buyer_email: buyerEmail,
+            buyer_phone: buyerPhone,
+            buyer_type: buyerType,
+            quantity: quantity,
+            message: message
+          })
+        });
+
+        if (res.ok) {
+          closeModal('inquiryModal');
+          alert('✅ Inquiry sent successfully! The artisan can now view your inquiry in their lead inbox.');
+          document.getElementById('inquiryForm').reset();
+          loadAllData();
+        } else {
+          const errData = await res.json();
+          alert('Failed to send inquiry: ' + (errData.detail || 'Validation error'));
+        }
+      } catch (err) {
+        alert('Network error while sending inquiry: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Submit Inquiry';
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-      event.target.classList.add('active');
+      if (event && event.target) {
+        event.target.classList.add('active');
+      }
       document.getElementById('tab-' + tabId).style.display = 'block';
     }
 
@@ -536,11 +801,45 @@
       loadAllData();
     }
 
-    function closeModal() {
-      document.getElementById('protocolModal').style.display = 'none';
+    function closeModal(modalId = 'protocolModal') {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function saveAdminToken() {
+      const input = document.getElementById('adminTokenInput');
+      if (input && input.value.trim()) {
+        localStorage.setItem('artisan_admin_token', input.value.trim());
+        loadAllData();
+      }
+    }
+
+    async function loginDemoAdmin() {
+      try {
+        const sendRes = await fetch('/auth/otp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '+919999999999' })
+        });
+        const sendData = await sendRes.json();
+        const otpCode = sendData.demo_otp || '123456';
+
+        const verifyRes = await fetch('/auth/otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '+919999999999', otp: otpCode })
+        });
+        const verifyData = await verifyRes.json();
+        if (verifyData.access_token) {
+          localStorage.setItem('artisan_admin_token', verifyData.access_token);
+          loadAllData();
+        }
+      } catch (e) {
+        alert('Could not authenticate demo admin: ' + e);
+      }
     }
 
     window.onload = loadAllData;
   </script>
 </body>
 </html>
+

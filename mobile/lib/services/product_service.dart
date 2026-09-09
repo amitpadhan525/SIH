@@ -7,10 +7,6 @@ class ProductService {
 
   ApiClient get apiClient => _apiClient;
 
-  void setAuthToken(String? token) {
-    _apiClient.authToken = token;
-  }
-
   ProductService({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();
 
@@ -130,7 +126,7 @@ class ProductService {
     String filename,
   ) async {
     final response = await _apiClient.postMultipart(
-      ApiConstants.aiCatalogTranscribe,
+      ApiConstants.aiTranscribe,
       fileBytes: fileBytes,
       filename: filename,
     );
@@ -231,47 +227,61 @@ class ProductService {
     return response as Map<String, dynamic>;
   }
 
-  /// Registers a new user/artisan account
-  Future<Map<String, dynamic>> register(Map<String, dynamic> request) async {
-    final response = await _apiClient.post(ApiConstants.authRegister, body: request);
-    return response as Map<String, dynamic>;
-  }
+  /// Fetches public published products from the marketplace discovery feed with optional filters
+  Future<List<Map<String, dynamic>>> getMarketplaceProducts({
+    String? query,
+    String? category,
+    double? minPrice,
+    double? maxPrice,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'limit': limit,
+      'offset': offset,
+    };
+    if (query != null && query.trim().isNotEmpty) {
+      queryParams['query'] = query.trim();
+    }
+    if (category != null && category.trim().isNotEmpty && category != 'All') {
+      queryParams['category'] = category.trim();
+    }
+    if (minPrice != null) {
+      queryParams['min_price'] = minPrice;
+    }
+    if (maxPrice != null) {
+      queryParams['max_price'] = maxPrice;
+    }
 
-  /// Logs in with phone and password
-  Future<Map<String, dynamic>> login(String phone, String password) async {
-    final response = await _apiClient.post(
-      ApiConstants.authLogin,
-      body: {'phone': phone, 'password': password},
-    );
-    return response as Map<String, dynamic>;
-  }
-
-  /// Sends OTP code to phone number
-  Future<Map<String, dynamic>> sendOtp(String phone) async {
-    final response = await _apiClient.post(
-      ApiConstants.authOtpSend,
-      body: {'phone': phone},
-    );
-    return response as Map<String, dynamic>;
-  }
-
-  /// Verifies OTP code and returns authenticated session token
-  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
-    final response = await _apiClient.post(
-      ApiConstants.authOtpVerify,
-      body: {'phone': phone, 'otp': otp},
-    );
-    return response as Map<String, dynamic>;
-  }
-
-  /// Gets authenticated user profile from token
-  Future<Map<String, dynamic>> getMe(String token) async {
     final response = await _apiClient.get(
-      ApiConstants.authMe,
-      headers: {'Authorization': 'Bearer $token'},
+      ApiConstants.marketplaceProducts,
+      queryParams: queryParams,
+    );
+
+    if (response is List) {
+      return response.map((item) => item as Map<String, dynamic>).toList();
+    }
+    return [];
+  }
+
+  /// Fetches single published product details with safe public artisan data
+  Future<Map<String, dynamic>> getMarketplaceProduct(int productId) async {
+    final response = await _apiClient.get(ApiConstants.marketplaceProductById(productId));
+    return response as Map<String, dynamic>;
+  }
+
+  /// Submits a buyer B2B or retail inquiry for a published product
+  Future<Map<String, dynamic>> submitProductInquiry(
+    int productId,
+    Map<String, dynamic> inquiryData,
+  ) async {
+    final response = await _apiClient.post(
+      ApiConstants.productInquiries(productId),
+      body: inquiryData,
     );
     return response as Map<String, dynamic>;
   }
+
 
   /// Flushes queued offline actions to the backend sync batch endpoint
   Future<Map<String, dynamic>> syncBatch(int artisanId, List<Map<String, dynamic>> actions) async {

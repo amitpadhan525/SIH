@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 
+from backend.app.core.security import get_current_artisan
 from backend.app.db.session import get_db
 from backend.app.models import User, Artisan, Product, ProductImage, Inquiry
 from backend.app.schemas.sync import (
@@ -26,6 +27,7 @@ _PROCESSED_ACTION_IDS: Dict[str, SyncActionResponse] = {}
 @router.post("/batch", response_model=SyncBatchResponse, status_code=status.HTTP_200_OK)
 def sync_batch(
     payload: SyncBatchRequest,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ):
     """
@@ -33,6 +35,12 @@ def sync_batch(
     updating inquiry leads while offline).
     Guarantees strict idempotency via client_action_id.
     """
+    if payload.artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to sync data for another artisan.",
+        )
+
     artisan = db.scalar(select(Artisan).where(Artisan.id == payload.artisan_id))
     if not artisan:
         raise HTTPException(
@@ -206,12 +214,18 @@ def sync_batch(
 def get_sync_delta(
     artisan_id: int = Query(..., description="ID of the artisan"),
     since: Optional[datetime] = Query(None, description="ISO timestamp of last sync"),
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ):
     """
     Fetches all products and inquiries updated on the server since the specified timestamp.
     Enables low-bandwidth catchup without re-downloading entire catalogs.
     """
+    if artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to fetch delta for another artisan.",
+        )
     prod_query = select(Product).where(Product.artisan_id == artisan_id)
     if since:
         prod_query = prod_query.where(Product.updated_at >= since)

@@ -4,8 +4,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
+from backend.app.api.catalog import speech_service
+from backend.app.ai.speech_service import MockSpeechToTextProvider
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def setup_mock_speech_provider():
+    original_provider = speech_service.provider
+    speech_service.provider = MockSpeechToTextProvider()
+    yield
+    speech_service.provider = original_provider
 
 
 def create_dummy_wav_bytes(duration_seconds: float = 1.0, sample_rate: int = 16000) -> bytes:

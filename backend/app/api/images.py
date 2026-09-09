@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, 
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from backend.app.core.security import get_current_artisan
 from backend.app.db.session import get_db
+from backend.app.models.artisan import Artisan
 from backend.app.models.product import Product
 from backend.app.models.product_image import ProductImage
 from backend.app.schemas.product_image import ProductImageRead, ImageEnhancePreviewResponse
@@ -28,6 +30,7 @@ async def upload_product_image(
         description="Studio background mode",
         enum=["white", "grey", "warm", "transparent"]
     ),
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ) -> ProductImageRead:
     """
@@ -35,12 +38,18 @@ async def upload_product_image(
     (contrast enhancement, background isolation/simplification, 1024x1024 square formatting),
     stores both original and studio versions, and links the image to the product.
     """
-    # 1. Verify product exists
+    # 1. Verify product exists and belongs to current authenticated artisan
     product = db.get(Product, product_id)
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product with id {product_id} not found."
+        )
+
+    if product.artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to upload images for this product."
         )
 
     # 2. Read and validate raw upload bytes
@@ -139,6 +148,7 @@ def list_product_images(
 def delete_product_image(
     product_id: int,
     image_id: int,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ) -> None:
     """
@@ -150,6 +160,12 @@ def delete_product_image(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product with id {product_id} not found."
+        )
+
+    if product.artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete images for this product."
         )
 
     image = db.scalars(

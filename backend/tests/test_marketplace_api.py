@@ -103,10 +103,13 @@ def test_submit_inquiry_nonexistent_product():
 
 def test_get_artisan_inquiries_and_status_update(test_setup):
     """Test artisan views received inquiries and updates lifecycle status."""
+    from backend.app.core.security import create_access_token
     artisan_id, published_id, _ = test_setup
+    token = create_access_token({"sub": "99", "role": "artisan", "name": "Rameshwar Mahapatra", "phone": "+919123456780", "artisan_id": 99})
+    headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Fetch artisan's inquiries
-    response = client.get(f"/artisans/{artisan_id}/inquiries")
+    response = client.get(f"/artisans/{artisan_id}/inquiries", headers=headers)
     assert response.status_code == 200
     inquiries = response.json()
     assert len(inquiries) >= 1
@@ -116,12 +119,12 @@ def test_get_artisan_inquiries_and_status_update(test_setup):
     assert "Traditional Palm Leaf Pattachitra" in target_inq["product_name"]
 
     # 2. Update status to 'contacted'
-    update_res = client.put(f"/inquiries/{inquiry_id}/status", json={"status": "contacted"})
+    update_res = client.put(f"/inquiries/{inquiry_id}/status", json={"status": "contacted"}, headers=headers)
     assert update_res.status_code == 200
     assert update_res.json()["status"] == "contacted"
 
     # 3. Invalid status rejected
-    invalid_res = client.put(f"/inquiries/{inquiry_id}/status", json={"status": "invalid_status"})
+    invalid_res = client.put(f"/inquiries/{inquiry_id}/status", json={"status": "invalid_status"}, headers=headers)
     assert invalid_res.status_code == 400
 
 
@@ -177,3 +180,69 @@ def test_export_gem_format(test_setup):
     assert data["hsn_code"] == "9701"  # Paintings HSN
     assert data["gst_rate_percent"] == 5.0
     assert data["bulk_minimum_order_qty"] == 10
+
+
+def test_marketplace_price_filtering(test_setup):
+    """Test min_price and max_price query parameters on marketplace feed."""
+    _, published_id, _ = test_setup
+
+    # Price of product 1001 is 3200.00
+    # Matching range
+    res1 = client.get("/marketplace/products?min_price=2000&max_price=4000")
+    assert res1.status_code == 200
+    assert published_id in [p["id"] for p in res1.json()]
+
+    # Out of range (lower)
+    res2 = client.get("/marketplace/products?max_price=1000")
+    assert res2.status_code == 200
+    assert published_id not in [p["id"] for p in res2.json()]
+
+    # Out of range (higher)
+    res3 = client.get("/marketplace/products?min_price=5000")
+    assert res3.status_code == 200
+    assert published_id not in [p["id"] for p in res3.json()]
+
+
+def test_marketplace_single_product_details_and_safe_artisan_info(test_setup):
+    """Test GET /marketplace/products/{id} returns product + safe artisan details, without leaking private data."""
+    artisan_id, published_id, draft_id = test_setup
+
+    # 1. Published product details
+    res = client.get(f"/marketplace/products/{published_id}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["id"] == published_id
+    assert data["name"] == "Traditional Palm Leaf Pattachitra Scroll"
+    assert data["artisan_name"] == "Rameshwar Mahapatra"
+    assert data["artisan_location"] == "Raghurajpur, Odisha"
+    assert data["craft_type"] == "Pattachitra Painting"
+
+    # Verify no private artisan data is leaked
+    assert "phone" not in data
+    assert "user_id" not in data
+    assert "otp" not in data
+
+    # 2. Draft product details returns 404 (hidden from public buyers)
+    res_draft = client.get(f"/marketplace/products/{draft_id}")
+    assert res_draft.status_code == 404
+
+    # 3. Non-existent product returns 404
+    res_none = client.get("/marketplace/products/999999")
+    assert res_none.status_code == 404
+
+
+def test_reject_inquiry_on_unpublished_draft_product(test_setup):
+    """Test that submitting an inquiry on a draft/unpublished product returns 404."""
+    _, _, draft_id = test_setup
+
+    payload = {
+        "buyer_name": "Test Buyer",
+        "buyer_email": "buyer@test.com",
+        "buyer_phone": "+919876543210",
+        "quantity": 5,
+        "message": "Interested in draft item.",
+    }
+
+    res = client.post(f"/products/{draft_id}/inquiries", json=payload)
+    assert res.status_code == 404
+

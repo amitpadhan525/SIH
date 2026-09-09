@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field
 
 
 class UserRegisterRequest(BaseModel):
-    name: str = Field(..., min_length=2, max_length=255)
+    name: str = Field(..., min_length=1, max_length=255)
     phone: str = Field(..., min_length=10, max_length=32)
-    password: str = Field(..., min_length=6, max_length=128)
+    password: Optional[str] = Field(default=None, max_length=128)
     role: str = Field(default="artisan", description="'artisan', 'buyer', 'admin'")
     language: str = Field(default="hi", description="'hi', 'or', 'bn', 'en'")
     location: Optional[str] = Field(default=None)
@@ -24,7 +24,7 @@ class OtpSendRequest(BaseModel):
 class OtpSendResponse(BaseModel):
     phone: str
     message: str
-    demo_otp: str = Field(..., description="Simulated 6-digit OTP for testing without live SMS gateway cost")
+    demo_otp: Optional[str] = Field(default=None, description="Simulated 6-digit OTP for testing without live SMS gateway cost")
 
 
 class OtpVerifyRequest(BaseModel):
@@ -40,3 +40,12 @@ class TokenResponse(BaseModel):
     name: str
     role: str
     phone: str
+    is_profile_complete: bool = False
+    craft_category: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    preferred_language: Optional[str] = "hi"
+    artisan_name: Optional[str] = None
+    artisan_type: Optional[str] = None
+    experience_years: Optional[int] = None
+    description: Optional[str] = None

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import get_current_artisan
 from backend.app.db.session import get_db
 from backend.app.models.artisan import Artisan
 from backend.app.models.product import Product
@@ -16,23 +17,16 @@ router = APIRouter()
     response_model=ProductRead,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new product",
-    description="Creates a product linked to an existing artisan. Defaults status to 'draft'.",
+    description="Creates a product securely linked to the currently authenticated artisan.",
 )
 def create_product(
     product_in: ProductCreate,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ) -> Product:
-    # 1. Verify artisan existence
-    artisan = db.get(Artisan, product_in.artisan_id)
-    if not artisan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artisan with id {product_in.artisan_id} not found",
-        )
-
-    # 2. Create product instance
+    # Derive ownership directly from authenticated artisan JWT session
     product = Product(
-        artisan_id=product_in.artisan_id,
+        artisan_id=current_artisan.id,
         name=product_in.name,
         category=product_in.category,
         description=product_in.description,
@@ -102,11 +96,12 @@ def get_product(
     response_model=ProductRead,
     status_code=status.HTTP_200_OK,
     summary="Update product details",
-    description="Updates existing product fields. Product ownership (artisan_id) cannot be changed.",
+    description="Updates existing product fields. Product must belong to the authenticated artisan.",
 )
 def update_product(
     product_id: int,
     product_in: ProductUpdate,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ) -> Product:
     product = db.get(Product, product_id)
@@ -114,6 +109,13 @@ def update_product(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
+        )
+
+    # IDOR Protection: verify product belongs to the authenticated artisan
+    if product.artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this product.",
         )
 
     update_data = product_in.model_dump(exclude_unset=True)
@@ -134,10 +136,11 @@ def update_product(
     "/{product_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a product",
-    description="Deletes a product by ID. Associated product images are automatically cascade-deleted.",
+    description="Deletes a product by ID. Product must belong to the authenticated artisan. Associated product images are automatically cascade-deleted.",
 )
 def delete_product(
     product_id: int,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ) -> None:
     product = db.get(Product, product_id)
@@ -145,6 +148,13 @@ def delete_product(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
+        )
+
+    # IDOR Protection: verify product belongs to the authenticated artisan
+    if product.artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this product.",
         )
 
     db.delete(product)

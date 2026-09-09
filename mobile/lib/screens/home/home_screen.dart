@@ -3,17 +3,19 @@ import 'package:artisan_mobile/core/constants/api_constants.dart';
 import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/models/product.dart';
 import 'package:artisan_mobile/screens/add_product/add_product_screen.dart';
-import 'package:artisan_mobile/screens/auth/login_screen.dart';
 import 'package:artisan_mobile/screens/inquiries/inquiries_screen.dart';
+import 'package:artisan_mobile/screens/marketplace/marketplace_screen.dart';
 import 'package:artisan_mobile/screens/products/products_screen.dart';
+import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
 import 'package:artisan_mobile/services/sync_service.dart';
 import 'package:artisan_mobile/widgets/artisan_button.dart';
 
 class HomeScreen extends StatefulWidget {
   final ProductService? productService;
+  final AuthService? authService;
 
-  const HomeScreen({super.key, this.productService});
+  const HomeScreen({super.key, this.productService, this.authService});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -21,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final ProductService _productService;
+  late final AuthService _authService;
   int _productCount = 0;
   bool _isLoading = true;
   bool _isDbConnected = false;
@@ -29,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _productService = widget.productService ?? ProductService();
+    _authService = widget.authService ?? AuthService(apiClient: _productService.apiClient);
     _loadDashboardData();
   }
 
@@ -38,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final isConnected = await _productService.checkDatabaseHealth();
       List<Product> products = [];
       if (isConnected) {
-        products = await _productService.getProducts();
+        final artisanId = _authService.currentArtisanId;
+        products = await _productService.getProducts(artisanId: artisanId);
       }
 
       if (mounted) {
@@ -86,6 +91,134 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => InquiriesScreen(productService: _productService),
+      ),
+    );
+  }
+
+  void _navigateToMarketplace() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MarketplaceScreen(productService: _productService),
+      ),
+    );
+  }
+
+  void _showProfileModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primaryLight,
+                    border: Border.all(color: AppColors.primary, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    size: 32,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _authService.currentArtisanName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _authService.currentArtisanPhone,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Craft Category', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(
+                        _authService.currentCraftCategory ?? 'Handicraft',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Location', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(
+                        '${_authService.currentDistrict ?? ''}, ${_authService.currentState ?? 'India'}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Language', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(
+                        _authService.currentPreferredLanguage ?? 'Hindi',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            ArtisanButton(
+              label: 'Logout from Artisan Studio',
+              icon: Icons.logout_rounded,
+              isOutlined: true,
+              onPressed: () {
+                Navigator.pop(ctx);
+                _authService.logout();
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
       ),
     );
   }
@@ -163,15 +296,8 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Artisan Profile / Login',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => LoginScreen(productService: _productService),
-                ),
-              );
-            },
+            tooltip: 'Artisan Profile / Account',
+            onPressed: _showProfileModal,
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -201,10 +327,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Namaste 🙏',
-                      style: TextStyle(
-                        fontSize: 24,
+                    Text(
+                      'Namaste, ${_authService.currentArtisanName} 🙏',
+                      style: const TextStyle(
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -271,7 +397,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
                         ),
                         onPressed: () async {
-                          final res = await SyncService().flushQueue(_productService, ApiConstants.defaultArtisanId);
+                          final artisanId = _authService.currentArtisanId ?? ApiConstants.defaultArtisanId;
+                          final res = await SyncService().flushQueue(_productService, artisanId);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -379,6 +506,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.mark_email_unread_outlined,
                 isOutlined: true,
                 onPressed: _navigateToInquiries,
+              ),
+              const SizedBox(height: 12),
+
+              ArtisanButton(
+                label: '🌐 Buyer Discovery Marketplace',
+                icon: Icons.storefront_rounded,
+                isOutlined: true,
+                onPressed: _navigateToMarketplace,
               ),
               const SizedBox(height: 32),
 

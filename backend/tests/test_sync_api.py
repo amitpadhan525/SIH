@@ -4,19 +4,10 @@ from fastapi.testclient import TestClient
 from backend.app.models import User, Artisan, Product, Inquiry
 
 
-def test_sync_batch_create_and_idempotency(client: TestClient, db_session):
-    # Ensure artisan exists
-    artisan = db_session.get(Artisan, 1)
-    if not artisan:
-        user = User(id=1, name="Sunita Devi", phone="+919876543210", role="artisan")
-        artisan = Artisan(id=1, user_id=1, craft_type="Madhubani Painting")
-        db_session.add(user)
-        db_session.add(artisan)
-        db_session.commit()
-
+def test_sync_batch_create_and_idempotency(client: TestClient, sample_artisan: Artisan, auth_headers: dict, db_session):
     action_id_1 = "offline-uuid-test-001"
     payload = {
-        "artisan_id": 1,
+        "artisan_id": sample_artisan.id,
         "actions": [
             {
                 "client_action_id": action_id_1,
@@ -35,7 +26,7 @@ def test_sync_batch_create_and_idempotency(client: TestClient, db_session):
     }
 
     # 1. First sync submission
-    res = client.post("/sync/batch", json=payload)
+    res = client.post("/sync/batch", json=payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["success"] is True
@@ -52,7 +43,7 @@ def test_sync_batch_create_and_idempotency(client: TestClient, db_session):
     assert created_product.price == Decimal("450.00")
 
     # 2. Resend same payload with identical client_action_id (idempotency check)
-    res_retry = client.post("/sync/batch", json=payload)
+    res_retry = client.post("/sync/batch", json=payload, headers=auth_headers)
     assert res_retry.status_code == 200
     data_retry = res_retry.json()
     assert data_retry["applied_count"] == 0
@@ -61,18 +52,10 @@ def test_sync_batch_create_and_idempotency(client: TestClient, db_session):
     assert data_retry["results"][0]["server_id"] == server_prod_id
 
 
-def test_sync_batch_update_product_and_inquiry(client: TestClient, db_session):
-    artisan = db_session.get(Artisan, 1)
-    if not artisan:
-        user = User(id=1, name="Sunita Devi", phone="+919876543210", role="artisan")
-        artisan = Artisan(id=1, user_id=1, craft_type="Madhubani Painting")
-        db_session.add(user)
-        db_session.add(artisan)
-        db_session.commit()
-
+def test_sync_batch_update_product_and_inquiry(client: TestClient, sample_artisan: Artisan, auth_headers: dict, db_session):
     # Create existing product and inquiry
     product = Product(
-        artisan_id=1,
+        artisan_id=sample_artisan.id,
         name="Dhokra Horse",
         category="Metal Craft",
         price=Decimal("1200.00"),
@@ -96,7 +79,7 @@ def test_sync_batch_update_product_and_inquiry(client: TestClient, db_session):
     db_session.refresh(inquiry)
 
     payload = {
-        "artisan_id": 1,
+        "artisan_id": sample_artisan.id,
         "actions": [
             {
                 "client_action_id": "offline-uuid-test-002",
@@ -118,7 +101,7 @@ def test_sync_batch_update_product_and_inquiry(client: TestClient, db_session):
         ],
     }
 
-    res = client.post("/sync/batch", json=payload)
+    res = client.post("/sync/batch", json=payload, headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["applied_count"] == 2
@@ -131,8 +114,8 @@ def test_sync_batch_update_product_and_inquiry(client: TestClient, db_session):
     assert inquiry.status == "contacted"
 
 
-def test_sync_delta_endpoint(client: TestClient, db_session):
-    res = client.get("/sync/delta?artisan_id=1")
+def test_sync_delta_endpoint(client: TestClient, sample_artisan: Artisan, auth_headers: dict, db_session):
+    res = client.get(f"/sync/delta?artisan_id={sample_artisan.id}", headers=auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert "server_time" in data

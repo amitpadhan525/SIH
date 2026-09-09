@@ -64,9 +64,9 @@ def get_marketplace_products(
     feed = []
     for p in products:
         artisan_user = p.artisan.user if p.artisan else None
-        artisan_name = artisan_user.name if artisan_user else "Traditional Artisan"
+        artisan_name = (p.artisan.artisan_name if p.artisan and p.artisan.artisan_name else None) or (artisan_user.name if artisan_user else "Traditional Artisan")
         artisan_loc = artisan_user.location if artisan_user else "India"
-        craft = p.artisan.craft_type if p.artisan else p.category
+        craft = (p.artisan.craft_category or p.artisan.craft_type) if p.artisan else p.category
         images = [img.processed_url for img in p.images]
 
         feed.append(
@@ -76,6 +76,9 @@ def get_marketplace_products(
                 artisan_name=artisan_name,
                 artisan_location=artisan_loc,
                 craft_type=craft,
+                artisan_state=p.artisan.state if p.artisan else None,
+                artisan_district=p.artisan.district if p.artisan else None,
+                artisan_bio=p.artisan.description if p.artisan else None,
                 name=p.name,
                 category=p.category,
                 description=p.description,
@@ -87,6 +90,58 @@ def get_marketplace_products(
         )
 
     return feed
+
+
+@router.get(
+    "/products/{product_id}",
+    response_model=PublicMarketplaceProduct,
+    status_code=status.HTTP_200_OK,
+    summary="Get single published product details with safe public artisan info",
+)
+def get_marketplace_product_by_id(product_id: int, db: Session = Depends(get_db)):
+    """
+    Public single product details endpoint for buyers.
+    Strictly returns only published products. If draft or archived, returns 404.
+    """
+    product = (
+        db.execute(
+            select(Product)
+            .options(joinedload(Product.artisan).joinedload(Artisan.user), joinedload(Product.images))
+            .where(Product.id == product_id, Product.status == "published")
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Published product with id {product_id} not found",
+        )
+
+    artisan_user = product.artisan.user if product.artisan else None
+    artisan_name = (product.artisan.artisan_name if product.artisan and product.artisan.artisan_name else None) or (artisan_user.name if artisan_user else "Traditional Artisan")
+    artisan_loc = artisan_user.location if artisan_user else "India"
+    craft = (product.artisan.craft_category or product.artisan.craft_type) if product.artisan else product.category
+    images = [img.processed_url for img in product.images]
+
+    return PublicMarketplaceProduct(
+        id=product.id,
+        artisan_id=product.artisan_id,
+        artisan_name=artisan_name,
+        artisan_location=artisan_loc,
+        craft_type=craft,
+        artisan_state=product.artisan.state if product.artisan else None,
+        artisan_district=product.artisan.district if product.artisan else None,
+        artisan_bio=product.artisan.description if product.artisan else None,
+        name=product.name,
+        category=product.category,
+        description=product.description,
+        material=product.material,
+        price=product.price,
+        image_urls=images,
+        created_at=product.created_at,
+    )
 
 
 @router.get(

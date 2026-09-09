@@ -31,7 +31,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Artisan Studio'), findsOneWidget);
-    expect(find.text('Namaste 🙏'), findsOneWidget);
+    expect(find.textContaining('Namaste'), findsOneWidget);
     expect(find.text('Add New Product'), findsOneWidget);
     expect(find.text('View All Products'), findsOneWidget);
   });

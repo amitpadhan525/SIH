@@ -18,8 +18,10 @@ class ApiClient {
   final http.Client _client;
   static const Duration _defaultTimeout = Duration(seconds: 20);
   String? authToken;
+  void Function()? onUnauthorized;
 
-  ApiClient({http.Client? client, this.authToken}) : _client = client ?? http.Client();
+  ApiClient({http.Client? client, this.authToken, this.onUnauthorized})
+      : _client = client ?? http.Client();
 
   Map<String, String> get _headers {
     final map = <String, String>{
@@ -238,6 +240,12 @@ class ApiClient {
       return responseBody;
     }
 
+    // Handle 401 Unauthorized globally
+    if (response.statusCode == 401) {
+      authToken = null;
+      onUnauthorized?.call();
+    }
+
     String errorMessage = 'Something went wrong. Please try again.';
     if (responseBody is Map && responseBody.containsKey('detail')) {
       final detail = responseBody['detail'];
@@ -249,8 +257,14 @@ class ApiClient {
           errorMessage = first['msg'].toString();
         }
       }
+    } else if (response.statusCode == 401) {
+      errorMessage = 'Session expired or unauthorized. Please log in again.';
+    } else if (response.statusCode == 403) {
+      errorMessage = 'Access denied. You do not have permission for this action.';
     } else if (response.statusCode == 404) {
       errorMessage = 'Resource not found.';
+    } else if (response.statusCode == 422) {
+      errorMessage = 'Validation error. Please check your inputs.';
     } else if (response.statusCode == 500) {
       errorMessage = 'Server error occurred. Please try again later.';
     }

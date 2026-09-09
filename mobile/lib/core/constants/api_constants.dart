@@ -16,6 +16,7 @@ class ApiConstants {
   static String productImages(int productId) => '$baseUrl/products/$productId/images';
   static String productImageById(int productId, int imageId) => '$baseUrl/products/$productId/images/$imageId';
   static String get aiEnhanceImage => '$baseUrl/ai/images/enhance';
+  static String get aiTranscribe => '$baseUrl/ai/transcribe';
   static String get aiCatalogTranscribe => '$baseUrl/ai/catalog/transcribe';
   static String get aiCatalogGenerate => '$baseUrl/ai/catalog/generate';
   static String get aiCatalogTranslate => '$baseUrl/ai/catalog/translate';
@@ -26,10 +27,12 @@ class ApiConstants {
   static String get authOtpSend => '$baseUrl/auth/otp/send';
   static String get authOtpVerify => '$baseUrl/auth/otp/verify';
   static String get authMe => '$baseUrl/auth/me';
+  static String get authProfileUpdate => '$baseUrl/auth/me/profile';
   static String artisanInquiries(int artisanId) => '$baseUrl/artisans/$artisanId/inquiries';
   static String inquiryStatus(int inquiryId) => '$baseUrl/inquiries/$inquiryId/status';
   static String productInquiries(int productId) => '$baseUrl/products/$productId/inquiries';
   static String get marketplaceProducts => '$baseUrl/marketplace/products';
+  static String marketplaceProductById(int productId) => '$baseUrl/marketplace/products/$productId';
   static String marketplaceOndcExport(int productId) => '$baseUrl/marketplace/export/ondc/$productId';
   static String marketplaceGemExport(int productId) => '$baseUrl/marketplace/export/gem/$productId';
   static String get syncBatch => '$baseUrl/sync/batch';

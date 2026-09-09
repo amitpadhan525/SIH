@@ -5,11 +5,18 @@ import base64
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from backend.app.config import settings
+from backend.app.db.session import get_db
+from backend.app.models.artisan import Artisan
+from backend.app.models.user import User
 
 SECRET_KEY = getattr(settings, "SECRET_KEY", "sih-2026-artisan-super-secret-key-change-in-prod")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = getattr(settings, "ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 7)  # 7 days
 
 
 def hash_password(password: str) -> str:
@@ -88,3 +95,84 @@ def decode_access_token(token: str) -> Dict[str, Any]:
         raise ValueError("Token has expired")
 
     return payload
+
+
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """FastAPI dependency to extract and validate current authenticated user from Bearer JWT."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        payload = decode_access_token(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid or expired token: {str(exc)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    sub = payload.get("sub") or payload.get("user_id")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload missing subject identifier",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        user_id = int(sub)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user identifier in token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User associated with token no longer exists",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+
+def get_current_artisan(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Artisan:
+    """FastAPI dependency to extract and validate current authenticated artisan."""
+    artisan = current_user.artisan
+    if not artisan:
+        artisan = db.execute(select(Artisan).where(Artisan.user_id == current_user.id)).scalar_one_or_none()
+
+    if not artisan:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Current user does not have an active artisan profile",
+        )
+
+    return artisan
+
+
+def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """FastAPI dependency requiring authenticated user to have admin role."""
+    if not current_user.role or current_user.role.lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required for this resource.",
+        )
+    return current_user
+

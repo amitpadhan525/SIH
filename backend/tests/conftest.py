@@ -70,3 +70,63 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def sample_artisan(db_session: Session) -> Artisan:
+    user = User(
+        name="Sunita Devi",
+        phone="+919811122233",
+        role="artisan",
+        language="hi",
+        location="Madhubani, Bihar",
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    artisan = Artisan(
+        user_id=user.id,
+        craft_type="Madhubani Painting",
+    )
+    db_session.add(artisan)
+    db_session.commit()
+    db_session.refresh(artisan)
+    return artisan
+
+
+@pytest.fixture
+def second_artisan(db_session: Session) -> Artisan:
+    user = User(
+        name="Gopal Das",
+        phone="+919844455566",
+        role="artisan",
+        language="hi",
+        location="Khurja, UP",
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    artisan = Artisan(
+        user_id=user.id,
+        craft_type="Ceramic Pottery",
+    )
+    db_session.add(artisan)
+    db_session.commit()
+    db_session.refresh(artisan)
+    return artisan
+
+
+@pytest.fixture
+def auth_headers(sample_artisan: Artisan) -> dict:
+    from backend.app.core.security import create_access_token
+    token = create_access_token({
+        "sub": str(sample_artisan.user_id),
+        "role": sample_artisan.user.role,
+        "name": sample_artisan.user.name,
+        "phone": sample_artisan.user.phone,
+        "artisan_id": sample_artisan.id,
+    })
+    return {"Authorization": f"Bearer {token}"}
+

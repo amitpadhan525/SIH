@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 from fastapi.testclient import TestClient
 
+from backend.app.core.security import create_access_token
 from backend.app.main import app
 from backend.app.config import settings
 from backend.app.services.storage_service import storage_service, StorageService
@@ -70,11 +71,24 @@ def test_artisan_and_product(db_session):
     return product
 
 
-def test_upload_valid_jpeg_image(client: TestClient, test_artisan_and_product, isolate_test_upload_dir):
+@pytest.fixture
+def artisan_auth_headers(test_artisan_and_product) -> dict:
+    token = create_access_token({
+        "sub": "99",
+        "role": "artisan",
+        "name": "Sunita Devi",
+        "phone": "+919876543210",
+        "artisan_id": 99,
+    })
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_upload_valid_jpeg_image(client: TestClient, test_artisan_and_product, artisan_auth_headers, isolate_test_upload_dir):
     img_bytes = create_test_image_bytes("JPEG", (600, 400), "blue")
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images?background_mode=white",
-        files={"file": ("test_craft.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("test_craft.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
@@ -96,75 +110,82 @@ def test_upload_valid_jpeg_image(client: TestClient, test_artisan_and_product, i
         assert proc_img.format == "JPEG"
 
 
-def test_upload_valid_png_image(client: TestClient, test_artisan_and_product):
+def test_upload_valid_png_image(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     img_bytes = create_test_image_bytes("PNG", (500, 500), "green")
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images?background_mode=grey",
-        files={"file": ("test_craft.png", img_bytes, "image/png")}
+        files={"file": ("test_craft.png", img_bytes, "image/png")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
     assert data["original_url"].endswith(".png")
 
 
-def test_upload_valid_webp_image(client: TestClient, test_artisan_and_product):
+def test_upload_valid_webp_image(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     img_bytes = create_test_image_bytes("WEBP", (400, 400), "purple")
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images?background_mode=warm",
-        files={"file": ("test_craft.webp", img_bytes, "image/webp")}
+        files={"file": ("test_craft.webp", img_bytes, "image/webp")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 201
 
 
-def test_reject_invalid_mime_and_text_file(client: TestClient, test_artisan_and_product):
+def test_reject_invalid_mime_and_text_file(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     fake_bytes = b"Hello, this is not an image."
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("fake.jpg", fake_bytes, "image/jpeg")}
+        files={"file": ("fake.jpg", fake_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 400
     assert "Corrupted or invalid image" in response.json()["detail"]
 
 
-def test_reject_svg_and_script_payloads(client: TestClient, test_artisan_and_product):
+def test_reject_svg_and_script_payloads(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     svg_payload = b"<svg><script>alert('xss')</script></svg>"
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("vector.svg", svg_payload, "image/svg+xml")}
+        files={"file": ("vector.svg", svg_payload, "image/svg+xml")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 400
     assert "disallowed" in response.json()["detail"].lower()
 
 
-def test_reject_corrupted_image_bytes(client: TestClient, test_artisan_and_product):
+def test_reject_corrupted_image_bytes(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     # Truncated JPEG header
     corrupt_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01"
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("broken.jpg", corrupt_bytes, "image/jpeg")}
+        files={"file": ("broken.jpg", corrupt_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 400
 
 
-def test_reject_oversized_upload(client: TestClient, test_artisan_and_product, monkeypatch):
+def test_reject_oversized_upload(client: TestClient, test_artisan_and_product, artisan_auth_headers, monkeypatch):
     monkeypatch.setattr("backend.app.config.settings.MAX_UPLOAD_SIZE_BYTES", 500)  # 500 bytes limit
     img_bytes = create_test_image_bytes("JPEG", (300, 300))
     assert len(img_bytes) > 500
 
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("large.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("large.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 400
     assert "exceeds maximum allowed limit" in response.json()["detail"].lower()
 
 
-def test_path_traversal_filename_sanitization(client: TestClient, test_artisan_and_product, isolate_test_upload_dir):
+def test_path_traversal_filename_sanitization(client: TestClient, test_artisan_and_product, artisan_auth_headers, isolate_test_upload_dir):
     img_bytes = create_test_image_bytes("JPEG", (200, 200))
     # Malicious filename attempting to escape
     response = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("../../../../etc/passwd.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("../../../../etc/passwd.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 201
     data = response.json()
@@ -174,23 +195,32 @@ def test_path_traversal_filename_sanitization(client: TestClient, test_artisan_a
     assert str(orig_path).startswith(str(isolate_test_upload_dir.base_dir))
 
 
-def test_upload_to_nonexistent_product_returns_404(client: TestClient):
+def test_upload_to_nonexistent_product_returns_404(client: TestClient, artisan_auth_headers):
     img_bytes = create_test_image_bytes("JPEG", (200, 200))
     response = client.post(
         "/products/99999/images",
-        files={"file": ("craft.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("craft.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert response.status_code == 404
     assert "Product with id 99999 not found" in response.json()["detail"]
 
 
-def test_list_product_images(client: TestClient, test_artisan_and_product):
+def test_list_product_images(client: TestClient, test_artisan_and_product, artisan_auth_headers):
     # Upload two images
     img1 = create_test_image_bytes("JPEG", (200, 200), "red")
     img2 = create_test_image_bytes("PNG", (200, 200), "yellow")
 
-    client.post(f"/products/{test_artisan_and_product.id}/images", files={"file": ("1.jpg", img1, "image/jpeg")})
-    client.post(f"/products/{test_artisan_and_product.id}/images", files={"file": ("2.png", img2, "image/png")})
+    client.post(
+        f"/products/{test_artisan_and_product.id}/images",
+        files={"file": ("1.jpg", img1, "image/jpeg")},
+        headers=artisan_auth_headers,
+    )
+    client.post(
+        f"/products/{test_artisan_and_product.id}/images",
+        files={"file": ("2.png", img2, "image/png")},
+        headers=artisan_auth_headers,
+    )
 
     response = client.get(f"/products/{test_artisan_and_product.id}/images")
     assert response.status_code == 200
@@ -200,11 +230,12 @@ def test_list_product_images(client: TestClient, test_artisan_and_product):
     assert images[1]["original_url"].startswith("/uploads/originals/")
 
 
-def test_delete_product_image_cleans_up_files_and_db(client: TestClient, test_artisan_and_product, isolate_test_upload_dir):
+def test_delete_product_image_cleans_up_files_and_db(client: TestClient, test_artisan_and_product, artisan_auth_headers, isolate_test_upload_dir):
     img_bytes = create_test_image_bytes("JPEG", (300, 300))
     upload_res = client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("todelete.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("todelete.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert upload_res.status_code == 201
     image_id = upload_res.json()["id"]
@@ -217,7 +248,7 @@ def test_delete_product_image_cleans_up_files_and_db(client: TestClient, test_ar
     assert proc_path.exists()
 
     # Delete image
-    del_res = client.delete(f"/products/{test_artisan_and_product.id}/images/{image_id}")
+    del_res = client.delete(f"/products/{test_artisan_and_product.id}/images/{image_id}", headers=artisan_auth_headers)
     assert del_res.status_code == 204
 
     # Verify DB record is gone
@@ -229,16 +260,17 @@ def test_delete_product_image_cleans_up_files_and_db(client: TestClient, test_ar
     assert not proc_path.exists()
 
 
-def test_delete_nonexistent_image_returns_404(client: TestClient, test_artisan_and_product):
-    response = client.delete(f"/products/{test_artisan_and_product.id}/images/8888")
+def test_delete_nonexistent_image_returns_404(client: TestClient, test_artisan_and_product, artisan_auth_headers):
+    response = client.delete(f"/products/{test_artisan_and_product.id}/images/8888", headers=artisan_auth_headers)
     assert response.status_code == 404
 
 
-def test_product_deletion_cascades_product_images(client: TestClient, test_artisan_and_product, db_session):
+def test_product_deletion_cascades_product_images(client: TestClient, test_artisan_and_product, artisan_auth_headers, db_session):
     img_bytes = create_test_image_bytes("JPEG", (200, 200))
     client.post(
         f"/products/{test_artisan_and_product.id}/images",
-        files={"file": ("cascade.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("cascade.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
 
     # Confirm image in DB
@@ -246,7 +278,7 @@ def test_product_deletion_cascades_product_images(client: TestClient, test_artis
     assert len(images_before) == 1
 
     # Delete parent product
-    del_res = client.delete(f"/products/{test_artisan_and_product.id}")
+    del_res = client.delete(f"/products/{test_artisan_and_product.id}", headers=artisan_auth_headers)
     assert del_res.status_code == 204
 
     # Verify ProductImage record was automatically cascaded
@@ -294,11 +326,12 @@ def test_ai_enhance_transparent_background_removal(client: TestClient, isolate_t
         assert "A" in proc_img.getbands()
 
 
-def test_upload_transparent_product_image(client: TestClient, test_artisan_and_product, isolate_test_upload_dir):
+def test_upload_transparent_product_image(client: TestClient, test_artisan_and_product, artisan_auth_headers, isolate_test_upload_dir):
     img_bytes = create_test_image_bytes("JPEG", (500, 500), "purple")
     res = client.post(
         f"/products/{test_artisan_and_product.id}/images?background_mode=transparent",
-        files={"file": ("transparent_craft.jpg", img_bytes, "image/jpeg")}
+        files={"file": ("transparent_craft.jpg", img_bytes, "image/jpeg")},
+        headers=artisan_auth_headers,
     )
     assert res.status_code == 201
     data = res.json()
@@ -311,4 +344,3 @@ def test_upload_transparent_product_image(client: TestClient, test_artisan_and_p
     with Image.open(proc_path) as proc_img:
         assert proc_img.format == "PNG"
         assert proc_img.mode == "RGBA"
-

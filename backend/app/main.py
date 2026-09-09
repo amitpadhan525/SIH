@@ -11,7 +11,7 @@ from backend.app.models import Base, User, Artisan
 from backend.app.schemas.health import HealthResponse, DBHealthResponse
 from backend.app.api.products import router as products_router
 from backend.app.api.images import router as images_router
-from backend.app.api.catalog import router as catalog_router
+from backend.app.api.catalog import router as catalog_router, ai_router
 from backend.app.api.pricing import router as pricing_router
 from backend.app.api.inquiries import router as inquiries_router
 from backend.app.api.marketplace import router as marketplace_router
@@ -67,7 +67,7 @@ app = FastAPI(
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,6 +80,7 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 app.include_router(products_router, prefix="/products", tags=["Products"])
 app.include_router(images_router)
 app.include_router(catalog_router)
+app.include_router(ai_router)
 app.include_router(pricing_router)
 app.include_router(inquiries_router)
 app.include_router(marketplace_router)

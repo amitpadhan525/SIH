@@ -3,10 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import get_current_artisan, get_current_user
 from backend.app.db.session import get_db
 from backend.app.models.artisan import Artisan
 from backend.app.models.inquiry import Inquiry
 from backend.app.models.product import Product
+from backend.app.models.user import User
 from backend.app.schemas.inquiry import (
     ArtisanInquiryRead,
     InquiryCreate,
@@ -32,10 +34,10 @@ def create_product_inquiry(
     Public endpoint for retail and B2B buyers to express purchase/bulk interest.
     """
     product = db.get(Product, product_id)
-    if not product:
+    if not product or product.status != "published":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product with id {product_id} not found",
+            detail=f"Published product with id {product_id} not found",
         )
 
     inquiry = Inquiry(
@@ -65,11 +67,18 @@ def create_product_inquiry(
 def get_artisan_inquiries(
     artisan_id: int,
     status_filter: str = None,
+    current_artisan: Artisan = Depends(get_current_artisan),
     db: Session = Depends(get_db),
 ):
     """
     Returns inquiries for all products owned by the given artisan.
     """
+    if artisan_id != current_artisan.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view inquiries for another artisan.",
+        )
+
     artisan = db.get(Artisan, artisan_id)
     if not artisan:
         raise HTTPException(
@@ -124,10 +133,11 @@ def get_artisan_inquiries(
 def update_inquiry_status(
     inquiry_id: int,
     status_in: InquiryStatusUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Allows the artisan to mark inquiries as contacted, accepted, or declined.
+    Allows the owner artisan or admin to update inquiry lifecycle status.
     """
     valid_statuses = {"pending", "contacted", "accepted", "declined"}
     if status_in.status not in valid_statuses:
@@ -143,7 +153,18 @@ def update_inquiry_status(
             detail=f"Inquiry with id {inquiry_id} not found",
         )
 
+    is_admin = bool(current_user.role and current_user.role.lower() == "admin")
+    is_owner = bool(current_user.artisan and inquiry.product.artisan_id == current_user.artisan.id)
+
+    if not (is_admin or is_owner):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update inquiries for products owned by another artisan.",
+        )
+
     inquiry.status = status_in.status
     db.commit()
     db.refresh(inquiry)
     return inquiry
+
+

@@ -32,7 +32,7 @@ class ProductBase(BaseModel):
 
 
 class ProductCreate(ProductBase):
-    artisan_id: int = Field(..., description="Foreign key referencing artisans.id")
+    artisan_id: Optional[int] = Field(default=None, description="Foreign key referencing artisans.id; derived from authenticated artisan")
 
 
 class ProductUpdate(BaseModel):

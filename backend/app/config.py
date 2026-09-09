@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Base directory for the backend application
@@ -27,6 +28,20 @@ class Settings(BaseSettings):
     PROCESSED_IMAGE_SIZE: int = 1024  # Standard 1024x1024 square canvas
     ALLOWED_IMAGE_FORMATS: list[str] = ["JPEG", "PNG", "WEBP"]
 
+    # Speech-to-Text Configuration (Local Whisper)
+    WHISPER_MODEL_PATH: Optional[str] = None
+    WHISPER_MODEL_NAME: str = "base"
+
+    # Security & Authentication Configuration
+    SECRET_KEY: str = "sih-2026-artisan-super-secret-key-change-in-prod"
+    AUTH_DEMO_MODE: bool = True
+    OTP_EXPIRY_SECONDS: int = 300  # 5 minutes
+    MAX_OTP_VERIFY_ATTEMPTS: int = 5
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
+    # CORS Configuration
+    CORS_ORIGINS: list[str] = ["*"]
+
     model_config = SettingsConfigDict(
         env_file=(
             str(ROOT_DIR / ".env"),
@@ -37,4 +52,20 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    def validate_production_security(self) -> None:
+        """Ensures secure secrets in production environment."""
+        if self.ENVIRONMENT.lower() == "production":
+            insecure_defaults = [
+                "sih-2026-artisan-super-secret-key-change-in-prod",
+                "secret",
+                "changeme",
+                "default",
+            ]
+            if not self.SECRET_KEY or self.SECRET_KEY in insecure_defaults or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "FATAL: Insecure or default SECRET_KEY in production! "
+                    "You must set a secure SECRET_KEY (min 32 chars) in production environment variables."
+                )
+
 settings = Settings()
+settings.validate_production_security()

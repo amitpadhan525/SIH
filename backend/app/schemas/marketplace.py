@@ -10,6 +10,9 @@ class PublicMarketplaceProduct(BaseModel):
     artisan_name: str
     artisan_location: Optional[str] = None
     craft_type: Optional[str] = None
+    artisan_state: Optional[str] = None
+    artisan_district: Optional[str] = None
+    artisan_bio: Optional[str] = None
     name: str
     category: str
     description: Optional[str] = None

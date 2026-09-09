@@ -51,7 +51,18 @@ pgdata/
 backend/uploads/originals/*
 backend/uploads/processed/*
 backend/uploads/previews/*
+backend/uploads/audio/*
 !backend/uploads/**/.gitkeep
+
+# ML Models & Weights
+*.bin
+*.onnx
+*.pt
+*.pth
+*.tflite
+models/
+whisper_models/
+.whisper/
 
 # Flutter & Dart
 .dart_tool/

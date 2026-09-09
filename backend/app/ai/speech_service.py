@@ -1,101 +1,185 @@
 import io
+import os
 import re
+import tempfile
+import time
+import uuid
 import wave
 from typing import Optional, Protocol, Tuple
 
+from backend.app.config import settings
 
-class SpeechRecognizerAdapter(Protocol):
-    """Protocol for pluggable speech-to-text models (Whisper, Conformer, Bhashini, etc.)"""
 
-    def transcribe(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, float, float]:
-        """Returns (transcript, language_code, confidence, duration_seconds)"""
+class STTUnavailableError(Exception):
+    """Raised when the local Speech-to-Text provider/model is not available or configured."""
+    def __init__(self, message: str = "Local Speech-to-Text model is not configured or unavailable."):
+        super().__init__(message)
+        self.error_code = "LOCAL_STT_MODEL_UNAVAILABLE"
+
+
+class SpeechToTextProvider(Protocol):
+    """Protocol for speech-to-text providers (Local Whisper, etc.)."""
+
+    def is_available(self) -> bool:
+        """Returns True if the underlying model is loaded or accessible."""
+        ...
+
+    def transcribe(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, Optional[float], float]:
+        """
+        Transcribes audio data.
+        Returns: (transcript, detected_language, confidence_or_none, duration_seconds)
+        """
         ...
 
 
-class FallbackAudioTranscriber:
+class LocalWhisperProvider:
     """
-    Deterministic CPU-safe audio transcriber fallback.
-    Inspects audio headers (WAV duration) and extracts/matches craft speech profiles
-    or provides clean transcription fallback for testing and low-resource edge deployment.
+    Local CPU/GPU Whisper Speech-to-Text provider.
+    Uses locally configured Whisper/faster-whisper model weights without cloud or paid APIs.
     """
 
-    SAMPLE_CRAFT_CORPUS = {
-        "sambalpuri": (
-            "This is a handwoven Sambalpuri double ikat cotton saree in maroon and black. "
-            "It is hand-crafted with traditional shankha and chakra border motifs using natural dyes. "
-            "It took our family 18 days on a pit loom. Dry clean or gentle cold water handwash only.",
-            "en",
-        ),
-        "terracotta": (
-            "यह मिट्टी का बना हुआ पारंपरिक टेराकोटा पानी का मटका और शोपीस है। "
-            "इसे हाथ से चाक पर प्राकृतिक लाल मिट्टी से बनाया गया है और भट्टी में पकाया गया है। "
-            "इसे बनाने में 3 दिन लगे। इसे सीधी धूप और तेज़ झटके से बचाएं।",
-            "hi",
-        ),
-        "dokra": (
-            "This is an authentic Dokra bell metal tribal lamp handcrafted using ancient lost-wax brass casting technique. "
-            "Made with solid brass and bronze in Bastar style with rustic antique gold finish. "
-            "Takes 7 days to complete. Wipe gently with dry cotton cloth.",
-            "en",
-        ),
-        "madhubani": (
-            "यह हस्तनिर्मित मधुबनी पेंटिंग हस्तनिर्मित सूती कागज़ पर प्राकृतिक रंगों और बांस की टहनियों से बनाई गई है। "
-            "इसमें पारंपरिक मिथिला शैली में सूर्य और मछली का रेखांकन है। "
-            "कलाकार को इसे पूरा करने में 5 दिन लगे।",
-            "hi",
-        ),
-    }
+    def __init__(self, model_path: Optional[str] = None, model_name: Optional[str] = None):
+        self.model_path = model_path or getattr(settings, "WHISPER_MODEL_PATH", None)
+        self.model_name = model_name or getattr(settings, "WHISPER_MODEL_NAME", "base")
+        self._model = None
+        self._load_attempted = False
 
-    def transcribe(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, float, float]:
+    def _try_load_model(self):
+        if self._load_attempted:
+            return self._model
+        self._load_attempted = True
+
+        # First attempt: faster-whisper
+        try:
+            from faster_whisper import WhisperModel
+            target = self.model_path if self.model_path and os.path.exists(self.model_path) else self.model_name
+            self._model = ("faster_whisper", WhisperModel(target, device="cpu", compute_type="int8"))
+            return self._model
+        except Exception:
+            pass
+
+        # Second attempt: standard local openai-whisper
+        try:
+            import whisper
+            target = self.model_path if self.model_path and os.path.exists(self.model_path) else self.model_name
+            self._model = ("whisper", whisper.load_model(target, device="cpu"))
+            return self._model
+        except Exception:
+            pass
+
+        self._model = None
+        return None
+
+    def is_available(self) -> bool:
+        return self._try_load_model() is not None
+
+    def transcribe(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, Optional[float], float]:
+        engine = self._try_load_model()
+        if not engine:
+            raise STTUnavailableError("LOCAL_STT_MODEL_UNAVAILABLE")
+
+        engine_type, model = engine
+        ext = os.path.splitext(filename)[1].lower() or ".wav"
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp.write(audio_bytes)
+                temp_path = tmp.name
+
+            if engine_type == "faster_whisper":
+                segments, info = model.transcribe(temp_path, beam_size=5)
+                transcript = " ".join([seg.text.strip() for seg in segments]).strip()
+                detected_lang = info.language if info.language else "en"
+                duration = round(info.duration, 2) if info.duration else 0.0
+                confidence = round(info.language_probability, 2) if hasattr(info, "language_probability") else None
+                return transcript, detected_lang, confidence, duration
+
+            elif engine_type == "whisper":
+                result = model.transcribe(temp_path)
+                transcript = result.get("text", "").strip()
+                detected_lang = result.get("language", "en")
+                return transcript, detected_lang, None, 0.0
+
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+
+        raise STTUnavailableError("LOCAL_STT_MODEL_UNAVAILABLE")
+
+
+class MockSpeechToTextProvider:
+    """
+    Mock STT provider strictly for unit tests and local test fixtures.
+    Must never be used as a fake fallback in real production requests.
+    """
+
+    def __init__(self, canned_transcript: str = "Handwoven Sambalpuri cotton saree", language: str = "en"):
+        self.canned_transcript = canned_transcript
+        self.language = language
+
+    def is_available(self) -> bool:
+        return True
+
+    def transcribe(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, Optional[float], float]:
         duration = 0.0
         try:
-            # Try to read WAV header if applicable
             with wave.open(io.BytesIO(audio_bytes), "rb") as wf:
                 frames = wf.getnframes()
                 rate = wf.getframerate()
                 if rate > 0:
                     duration = round(frames / float(rate), 2)
         except Exception:
-            # Estimated fallback: ~16KB per second for standard 16kHz 16-bit mono PCM/compressed audio
             duration = max(1.0, round(len(audio_bytes) / 32000.0, 1))
 
-        # Check if filename hints at a test craft sample or default to Sambalpuri Ikat demonstration
         fname_lower = filename.lower()
-        matched_sample = None
-        for key, (text, lang) in self.SAMPLE_CRAFT_CORPUS.items():
-            if key in fname_lower:
-                matched_sample = (text, lang)
-                break
+        if "terracotta" in fname_lower:
+            return (
+                "यह मिट्टी का बना हुआ पारंपरिक टेराकोटा पानी का मटका और शोपीस है।",
+                "hi",
+                0.96,
+                duration,
+            )
+        elif "sambalpuri" in fname_lower:
+            return (
+                "This is a handwoven Sambalpuri double ikat cotton saree in maroon and black.",
+                "en",
+                0.96,
+                duration,
+            )
 
-        if matched_sample:
-            transcript, lang = matched_sample
-            return transcript, lang, 0.96, duration
-
-        # Default fallback demonstration craft transcript
-        default_transcript = (
-            "This is a pure handwoven Sambalpuri cotton saree with traditional geometric motifs. "
-            "Crafted using natural dyed organic cotton yarn on traditional handloom. "
-            "It took 14 days of dedicated handcrafting."
-        )
-        return default_transcript, "en", 0.94, duration
+        return self.canned_transcript, self.language, 0.95, duration
 
 
-class SpeechService:
-    """Main Speech-to-Text orchestrator with pluggable adapter and fallback mechanism."""
 
-    def __init__(self, adapter: Optional[SpeechRecognizerAdapter] = None):
-        self.adapter = adapter or FallbackAudioTranscriber()
+class SpeechToTextService:
+    """
+    Main Speech-to-Text orchestrator.
+    Validates audio streams and delegates strictly to the configured local provider.
+    No fake transcription fallbacks.
+    """
 
-    def transcribe_audio(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, float, float]:
+    def __init__(self, provider: Optional[SpeechToTextProvider] = None):
+        self.provider = provider or LocalWhisperProvider()
+
+    def transcribe_audio(self, audio_bytes: bytes, filename: str) -> Tuple[str, str, Optional[float], float]:
         """
-        Transcribes audio data.
-        Returns:
-            transcript: Transcribed string
-            detected_language: ISO language code ('hi', 'en', 'or', etc.)
-            confidence: Confidence score between 0.0 and 1.0
-            duration_seconds: Duration of audio in seconds
+        Validates audio bytes and transcribes via local provider.
+        Raises ValueError on corrupted audio or STTUnavailableError if local Whisper is not available.
         """
         if not audio_bytes or len(audio_bytes) < 16:
             raise ValueError("Audio file is empty or corrupted.")
 
-        return self.adapter.transcribe(audio_bytes, filename)
+        if not self.provider.is_available():
+            raise STTUnavailableError(
+                "Local Whisper model is not configured or unavailable on this server. "
+                "Please configure WHISPER_MODEL_PATH or install local speech model."
+            )
+
+        return self.provider.transcribe(audio_bytes, filename)
+
+
+# Maintain backward compatibility alias for legacy imports
+SpeechService = SpeechToTextService
