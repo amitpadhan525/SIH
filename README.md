@@ -1,4 +1,4 @@
-# 🏺 Artisan AI — SIH 2026 Production Hardened Architecture
+<img width="1150" height="972" alt="image" src="https://github.com/user-attachments/assets/92a82886-121f-4d7c-9af3-516a40bd64fa" /># 🏺 Artisan AI — SIH 2026 Production Hardened Architecture
 > **PS Number**: SIH26090  
 > **Theme**: AI-driven digital commerce and catalog management platform for grassroots artisans.  
 > **Core Workflow**: `PHOTO ➔ SPEAK ➔ PROCESS ➔ REVIEW/EDIT ➔ PUBLISH`
@@ -57,6 +57,28 @@
                                │  (Alembic Migrations)   │
                                └─────────────────────────┘
 ```
+                 ┌──────────────────┐
+                 │   ARTISAN USER   │
+                 │  Android App     │
+                 └────────┬─────────┘
+                          │
+                          │ HTTP/API
+                          ▼
+                 ┌──────────────────┐
+                 │     FastAPI      │
+                 │     Backend      │
+                 └────────┬─────────┘
+                          │
+              ┌───────────┼───────────┐
+              ▼           ▼           ▼
+          PostgreSQL     AI       File Storage
+              │           │
+              │     ┌─────┼─────┐
+              │     ▼     ▼     ▼
+              │   Image  Voice  Pricing
+              │    AI     AI     Engine
+              ▼
+          Product Data
 
 ---
 
