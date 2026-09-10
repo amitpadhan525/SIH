@@ -100,7 +100,9 @@ void main() {
         ),
       );
 
-      // Tap generate
+      // Scroll to and tap generate
+      await tester.ensureVisible(find.text('Generate Auto-Catalog'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Generate Auto-Catalog'));
       await tester.pumpAndSettle();
 

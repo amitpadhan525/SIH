@@ -197,35 +197,61 @@ flutter analyze
 
 ---
 
+### ✅ Stage 13: SIH PS-90 Full Production Polish & Verification
+- **Real Whisper STT Pipeline**:
+  - `faster-whisper` and `ctranslate2` local CPU int8 quantized model weights loaded and cached.
+  - Magic byte validation, multipart streaming audio endpoint at `/ai/transcribe`.
+  - Android permissions added (`RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `READ_MEDIA_AUDIO`).
+  - Added support for English, Hindi, and Odia (`or`) craft dialects.
+- **AI Dynamic Pricing Assistant UX Overhaul**:
+  - Add Product screen redesigned so the AI Pricing Assistant is the primary first-class flow.
+  - 3 Selectable Tiers: Fair Base Price (25% margin), Recommended Market Price (45% margin, default), and Premium Heritage/Export Price (75% margin).
+  - One-tap selection updates the active product price; optional manual override field remains accessible.
+- **Realistic Indian Handicraft Seed Data**:
+  - Created `backend/app/db/seed_demo_data.py` containing authentic Indian handicrafts (Sambalpuri Ikat Saree, Bastar Dokra Lamp, Terracotta Pot, Madhubani Art, Bamboo Craft, Tribal Jewelry) and B2B wholesale inquiries.
+  - Integrated into FastAPI startup lifespan.
+- **Environment & Build Reliability**:
+  - Enhanced `ApiConstants` with dynamic switching between `devBaseUrl` (`127.0.0.1:8000`), local network IP, and `prodBaseUrl`.
+  - Fixed Android `versionCode` and `versionName` resolution in `app/build.gradle`.
+
+---
+
 ## 🧪 Test Verification Status
 
-- **Backend Pytest Suite**: **70 / 70 tests passing** (100% pass rate):
+- **Backend Pytest Suite**: **103 / 103 tests passing** (100% pass rate):
   - `test_products_api.py`: 18 tests
-  - `test_images_api.py`: 13 tests
+  - `test_images_api.py`: 16 tests
   - `test_catalog_api.py`: 7 tests
   - `test_pricing_api.py`: 4 tests
-  - `test_marketplace_api.py`: 6 tests
-  - `test_auth_api.py`: 6 tests
-  - `test_sync_api.py`: 3 tests
+  - `test_marketplace_api.py`: 9 tests
+  - `test_auth_api.py`: 11 tests
+  - `test_profile_api.py`: 5 tests
+  - `test_idor.py`: 3 tests
+  - `test_audio_upload_security.py`: 5 tests
+  - `test_production_security.py`: 3 tests
+  - `test_admin_auth.py`: 3 tests
   - `test_admin_api.py`: 2 tests
+  - `test_sync_api.py`: 3 tests
+  - `test_whisper_stt.py`: 3 tests
   - `test_database.py`: 6 tests
   - `test_health.py`: 3 tests
-  - `test_migrations.py`: 2 tests
+  - `test_migrations.py`: 1 test
+  - `test_e2e_verification.py`: 1 test
 
-- **Flutter Mobile Suite**: **32 / 32 tests passing** (100% pass rate, `flutter analyze` 0 issues):
-  - `product_model_test.dart`: 4 tests
-  - `product_service_test.dart`: 5 tests
-  - `image_studio_test.dart`: 4 tests
-  - `voice_catalog_test.dart`: 4 tests
-  - `pricing_calculator_test.dart`: 4 tests
-  - `inquiries_test.dart`: 4 tests
-  - `auth_test.dart`: 3 tests
-  - `sync_test.dart`: 3 tests
-  - `widget_test.dart`: 5 tests
+- **Flutter Mobile Suite**: **55 / 55 tests passing** (100% pass rate, `flutter analyze` 0 issues):
+  - `voice_catalog_test.dart` & `voice_recording_test.dart`
+  - `pricing_calculator_test.dart`
+  - `inquiries_test.dart`
+  - `marketplace_test.dart` & `marketplace_product_detail_test.dart`
+  - `image_studio_test.dart`
+  - `auth_test.dart` & `complete_profile_test.dart`
+  - `sync_test.dart`
+  - `product_model_test.dart` & `product_service_test.dart`
+  - `home_screen_test.dart` & `products_screen_test.dart`
 
 - **Android Device & APK Status**:
-  - Debug APK built and installed on connected physical device: **moto g54 5G** (`ZD222H7659`).
-  - Binary location: `mobile/build/app/outputs/flutter-apk/app-debug.apk`.
+  - Live deployed and running on **moto g54 5G** (`ZD222H7659`).
+  - Active ADB Reverse: `tcp:8000 -> tcp:8000`.
 
 ---
 
@@ -234,8 +260,7 @@ flutter analyze
 ### Run Backend
 ```bash
 cd /home/amit/github/SIH
-source backend/.venv/bin/activate
-PYTHONPATH=. uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=. backend/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
 - Interactive Swagger UI: 👉 `http://localhost:8000/docs`
 - Web Admin Portal: 👉 `http://localhost:8000/admin/portal`
@@ -243,15 +268,15 @@ PYTHONPATH=. uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ### Run Backend Tests
 ```bash
 cd /home/amit/github/SIH
-source backend/.venv/bin/activate
-PYTHONPATH=. pytest backend/tests -v
+PYTHONPATH=. backend/.venv/bin/pytest
 ```
 
-### Run Flutter Mobile App
+### Run Flutter Mobile App on Phone
 ```bash
 cd /home/amit/github/SIH/mobile
+adb reverse tcp:8000 tcp:8000
 export PATH="/home/amit/development/flutter/bin:$PATH"
-flutter run -d ZD222H7659 --dart-define=API_BASE_URL=http://<YOUR_LAN_IP>:8000
+flutter run -d ZD222H7659
 
 # Run Flutter tests & analyzer:
 flutter test

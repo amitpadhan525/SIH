@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -42,6 +42,9 @@ class CatalogGenerateResponse(BaseModel):
     seo_keywords: List[str] = Field(default_factory=list, description="High-intent e-commerce search keywords")
     confidence_score: float = Field(default=0.92, ge=0.0, le=1.0, description="Fact extraction confidence")
     anti_hallucination_passed: bool = Field(default=True, description="Strict guarantee that unmentioned facts were not invented")
+    recommended_price: Optional[float] = Field(default=None, description="AI recommended fair market price in INR")
+    pricing_rationale: Optional[str] = Field(default=None, description="Explanation of recommended price calculation")
+    price_breakdown: Optional[Dict[str, Any]] = Field(default=None, description="Detailed cost breakdown and price tiers")
 
 
 class TranslationRequest(BaseModel):

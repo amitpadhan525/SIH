@@ -132,7 +132,7 @@ def test_marketplace_public_feed(test_setup):
     """Test public marketplace feed returns only published products and supports keyword search."""
     artisan_id, published_id, draft_id = test_setup
 
-    response = client.get("/marketplace/products")
+    response = client.get("/marketplace/products?limit=100")
     assert response.status_code == 200
     products = response.json()
 

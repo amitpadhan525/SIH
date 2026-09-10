@@ -29,28 +29,12 @@ async def lifespan(app: FastAPI):
     # Auto-create tables if needed in development
     Base.metadata.create_all(bind=engine)
 
-    # Seed default artisan (id: 1) if database is fresh to enable immediate product creation
+    # Ensure default artisan user exists for auth/demo access
     try:
+        from backend.app.db.seed_demo_data import ensure_default_artisan
         with SessionLocal() as db:
-            if not db.get(User, 1):
-                dev_user = User(
-                    id=1,
-                    name="Sunita Devi",
-                    phone="+919876543210",
-                    role="artisan",
-                    language="hi",
-                    location="Madhubani, Bihar",
-                )
-                dev_artisan = Artisan(
-                    id=1,
-                    user_id=1,
-                    craft_type="Madhubani Painting",
-                )
-                db.add(dev_user)
-                db.add(dev_artisan)
-                db.commit()
+            ensure_default_artisan(db)
     except Exception:
-        # Ignore seeding errors if already seeded by migrations
         pass
 
     yield

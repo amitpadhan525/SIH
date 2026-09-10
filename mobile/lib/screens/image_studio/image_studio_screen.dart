@@ -47,9 +47,9 @@ class _ImageStudioScreenState extends State<ImageStudioScreen> {
   String? _processedPreviewUrl;
   String? _errorMessage;
 
-  // Real valid JPEG sample craft image for evaluation without camera
+  // Real valid sample craft image for evaluation without camera
   static const String _sampleCraftJpegBase64 =
-      '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
+      'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAD2UlEQVR4nO3czU1bQRSG4UtERWRBE6mAdJCC0gEdpAhY0FMWlq6MMJZ/7mfPOfM8a2yf0bx3xmLhh7eXpwW29uPeA9CTsIgQFhHCIkJYRAiLCGERISwihEWEsIgQFhHCIkJYRAiLCGERISwihEWEsIgQFhGP17z4+fVjqzkY0/vvn5e90IlFhLCIuOoqXF18YDKm67/kOLGIEBYRwiJCWEQIiwhhESEsIoRFhLCIEBYRwiJCWEQIiwhhESEsIoRFhLCIEBYRwiJCWEQIiwhhESEsIoRFhLCIEBYRwiJCWEQIiwhhESEsIoRFhLCIEBYRwiJCWERs8+O2LT3//XfKn73/+ZWepCJhfXJiTN+9RGQrYS3LRT0dfx+FTR3WVj0deedpC5s0rFxSBz9owrymC+tmSX390KnymuvfDXepapBPv7FZTqxBNnWeo2uKE2uQqlajzZPQP6wxd3HMqTbU+SocfPN6X4ttT6zBq1pVmfNcPcOqtVu1pj1Rw7Aq7lPFmY9rGBYj6BZW3Ue/7uQHtQqr+t5Un39fn7B67EqPVSydwmIoTcJq86AvXdbSIaweO7GvwYo6hMWAyofV4OE+qPq6yofFmGqHVf2xPq706mqHxbCERUThsErfFCequ8bCYTEyYRFRNay6d8S5iq60algMTlhECIuIkmEV/dpxsYrrLRkW4xMWEcIiQlhECIsIYREhLCKERYSwiBAWEcIiQlhElAyr6w/CfqfiekuGxfiERYSwiKgaVsWvHZcputKqYTE4YRFROKyid8RZ6q6xcFiMTFhE1A6r7k1xitKrqx0WwyofVunH+ojq6yofFmPqEFb1h/urBivqENbSYidWPdbSJCxG0yesHg96j1UsncJa6u9K9fn3tQprqbw3dSc/qFtYDKJhWBUf/YozH9cwrKXaPtWa9kQ9w1rq7FaVOc/1eO8BgnZ7Nuwvw3ZNaqftibUac//GnGpD/cNaxtvF0eZJ6HwV7hvkWpwhqZ0pTqzVffd1nqqWeU6s1V2OrqmS2pkurJ2b5TVhUjuThrWz7vrmhU3b02rqsFZbFaanlbA+2S/jxMjEdJCwvqWYa8z17wZuRlhECIsIYREhLCKERYSwiBAWEcIiQlhECIsIYREhLCKERYSwiBAWEcIiQlhECIsIYREhLCKERYSwiBAWEcIiQlhECIsIYREhLCKERYSwiBAWEcIiQlhECIsIYRGxzY/bPr9+bPI+tOHEIkJYRDy8vTzdewYacmIRISwihEWEsIgQFhHCIkJYRAiLCGERISwihEWEsIgQFhHCIkJYRAiLCGERISwi/gMQnq+F5aZB3AAAAABJRU5ErkJggg==';
 
   @override
   void initState() {

@@ -156,6 +156,21 @@ class ProductService {
     return response as Map<String, dynamic>;
   }
 
+  /// High-level AI assistant for PS-90: extracts product details, stories, and recommended pricing in one call
+  Future<Map<String, dynamic>> autoExtractAndPrice(
+    String transcript, {
+    String sourceLanguage = 'auto',
+    List<String> targetLanguages = const ['en', 'hi', 'or'],
+    String? artisanNotes,
+  }) async {
+    return await generateCatalogContent(
+      transcript,
+      sourceLanguage: sourceLanguage,
+      targetLanguages: targetLanguages,
+      artisanNotes: artisanNotes,
+    );
+  }
+
   /// Translates text across Indian languages preserving craft terminology
   Future<Map<String, dynamic>> translateText(
     String text, {

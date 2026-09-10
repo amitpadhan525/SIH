@@ -76,8 +76,10 @@ void main() {
       await tester.pump();
 
       // Tap generate with empty transcript field
+      await tester.ensureVisible(find.text('Generate Auto-Catalog'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Generate Auto-Catalog'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Shows prompt message
       expect(find.text('Please speak or enter a craft description first.'), findsOneWidget);

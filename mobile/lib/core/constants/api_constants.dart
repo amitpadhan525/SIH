@@ -1,9 +1,13 @@
 class ApiConstants {
-  // Default base URL for physical device over USB reverse / local host
-  // Can be overridden at build time: --dart-define=API_BASE_URL=http://127.0.0.1:8000
+  static const String devBaseUrl = 'http://127.0.0.1:8000';
+  static const String prodBaseUrl = String.fromEnvironment(
+    'API_PROD_URL',
+    defaultValue: 'https://api.artisanai.in',
+  );
+
   static const String _defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: bool.fromEnvironment('dart.vm.product') ? prodBaseUrl : devBaseUrl,
   );
 
   static String customBaseUrl = _defaultBaseUrl;

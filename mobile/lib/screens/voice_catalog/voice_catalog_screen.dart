@@ -59,6 +59,10 @@ class _VoiceCatalogScreenState extends State<VoiceCatalogScreen>
         'यह हस्तनिर्मित मधुबनी पेंटिंग हस्तनिर्मित सूती कागज़ पर प्राकृतिक रंगों और बांस की टहनियों से बनाई गई है। '
         'इसमें पारंपरिक मिथिला शैली में सूर्य और मछली का रेखांकन है। '
         'कलाकार को इसे पूरा करने में 5 दिन लगे।',
+    'Sambalpuri Ikat (Odia)':
+        'ଏହା ଏକ ପାରମ୍ପରିକ ହାତବୁଣା ସମ୍ବଲପୁରୀ ଡବଲ ଇକତ ସୂତା ଶାଢ଼ୀ। '
+        'ଏଥିରେ ପାରମ୍ପରିକ ଶଙ୍ଖ ଓ ଚକ୍ର ବର୍ଡର ଡିଜାଇନ ପ୍ରାକୃତିକ ରଙ୍ଗରେ ତିଆରି ହୋଇଛି। '
+        'ଏହାକୁ ଗଢ଼ିବା ପାଇଁ ୧୮ ଦିନ ସମୟ ଲାଗିଛି।',
   };
 
   @override
@@ -282,7 +286,7 @@ class _VoiceCatalogScreenState extends State<VoiceCatalogScreen>
     try {
       final result = await _productService.generateCatalogContent(
         text,
-        targetLanguages: ['en', 'hi'],
+        targetLanguages: ['en', 'hi', 'or'],
       );
       setState(() {
         _catalogResult = result;
@@ -761,6 +765,7 @@ class _VoiceCatalogScreenState extends State<VoiceCatalogScreen>
                   segments: const [
                     ButtonSegment(value: 'en', label: Text('English')),
                     ButtonSegment(value: 'hi', label: Text('हिन्दी')),
+                    ButtonSegment(value: 'or', label: Text('ଓଡ଼ିଆ')),
                   ],
                   selected: {_selectedLanguageTab},
                   onSelectionChanged: (set) {
