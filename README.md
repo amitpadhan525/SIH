@@ -3,6 +3,20 @@
 > **Theme**: AI-driven digital commerce and catalog management platform for grassroots artisans.  
 > **Core Workflow**: `PHOTO ➔ SPEAK ➔ PROCESS ➔ REVIEW/EDIT ➔ PUBLISH`
 
+<div align="center">
+
+[![Download Latest APK](https://img.shields.io/badge/⬇️_DOWNLOAD_LATEST_APK-v1.1_(Android)-E65100?style=for-the-badge&logo=android&logoColor=white)](https://github.com/amitpadhan525/SIH/releases/download/v1.1/ArtisanAI-v1.1.apk)
+&nbsp;&nbsp;
+[![Offline Setup Guide](https://img.shields.io/badge/📴_OFFLINE_SETUP_GUIDE-Zero--Cloud_Docs-2E7D32?style=for-the-badge&logo=bookstack&logoColor=white)](docs/offline_setup.md)
+&nbsp;&nbsp;
+[![GitHub Releases](https://img.shields.io/badge/📦_ALL_RELEASES-v1.1_Latest-181717?style=for-the-badge&logo=github)](https://github.com/amitpadhan525/SIH/releases/latest)
+
+<br/>
+
+**📱 [Direct APK Download Link (v1.1)](https://github.com/amitpadhan525/SIH/releases/download/v1.1/ArtisanAI-v1.1.apk)** • **📴 [Offline Setup & Local Deployment Guide](docs/offline_setup.md)**
+
+</div>
+
 ---
 
 ## 🌟 System Architecture
