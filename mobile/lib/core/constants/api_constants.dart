@@ -44,14 +44,30 @@ class ApiConstants {
   static String get healthDb => '$baseUrl/health/db';
   static String get healthRoot => '$baseUrl/';
 
-  /// Resolves relative '/uploads/...' URLs against the configured API base URL
+  /// Resolves relative or absolute image URLs against the configured API base URL
   static String resolveImageUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+    if (path == null || path.trim().isEmpty) return '';
+    final cleanPath = path.trim().replaceAll('\\', '/');
+
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+
+    // Handle local host rewrite if baseUrl is custom LAN IP
+    if (cleanPath.startsWith('http://127.0.0.1:8000/')) {
+      final relativePart = cleanPath.substring('http://127.0.0.1:8000'.length);
+      return '$normalizedBase$relativePart';
     }
-    final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    if (cleanPath.startsWith('http://localhost:8000/')) {
+      final relativePart = cleanPath.substring('http://localhost:8000'.length);
+      return '$normalizedBase$relativePart';
+    }
+
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+      return cleanPath;
+    }
+
+    final normalizedPath = cleanPath.startsWith('/') ? cleanPath : '/$cleanPath';
     return '$normalizedBase$normalizedPath';
   }
 

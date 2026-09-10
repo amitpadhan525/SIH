@@ -38,10 +38,23 @@ class Product {
     final List<String> images = [];
     if (json['images'] is List) {
       for (final img in json['images']) {
-        if (img is Map && img['original_url'] != null) {
-          images.add(img['original_url'].toString());
+        if (img is Map) {
+          final url = img['original_url'] ?? img['processed_url'] ?? img['url'] ?? img['image_url'];
+          if (url != null && url.toString().trim().isNotEmpty) {
+            images.add(url.toString().trim());
+          }
+        } else if (img != null && img.toString().trim().isNotEmpty) {
+          images.add(img.toString().trim());
         }
       }
+    } else if (json['image_urls'] is List) {
+      for (final img in json['image_urls']) {
+        if (img != null && img.toString().trim().isNotEmpty) {
+          images.add(img.toString().trim());
+        }
+      }
+    } else if (json['image_url'] != null && json['image_url'].toString().trim().isNotEmpty) {
+      images.add(json['image_url'].toString().trim());
     }
 
     return Product(

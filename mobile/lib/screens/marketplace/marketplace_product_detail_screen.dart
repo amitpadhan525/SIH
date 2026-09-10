@@ -372,8 +372,21 @@ class _MarketplaceProductDetailScreenState extends State<MarketplaceProductDetai
                       child: Image.network(
                         ApiConstants.resolveImageUrl(images[_selectedImageIndex]),
                         fit: BoxFit.contain,
+                        loadingBuilder: (ctx, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          );
+                        },
                         errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                          child: Icon(Icons.photo_outlined, size: 48, color: Colors.grey),
                         ),
                       ),
                     )

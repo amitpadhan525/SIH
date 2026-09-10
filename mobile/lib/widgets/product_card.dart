@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:artisan_mobile/core/constants/api_constants.dart';
 import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/core/utils/currency_formatter.dart';
 import 'package:artisan_mobile/models/product.dart';
@@ -15,6 +16,8 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = product.imageUrls.isNotEmpty;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
@@ -25,19 +28,50 @@ class ProductCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product thumbnail / placeholder
+              // Product thumbnail / photo
               Container(
-                width: 72,
-                height: 72,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primaryLight.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
-                child: const Icon(
-                  Icons.inventory_2_outlined,
-                  size: 32,
-                  color: AppColors.primary,
-                ),
+                child: hasImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(13),
+                        child: Image.network(
+                          ApiConstants.resolveImageUrl(product.imageUrls.first),
+                          fit: BoxFit.cover,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(
+                              Icons.inventory_2_outlined,
+                              size: 32,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(
+                          Icons.inventory_2_outlined,
+                          size: 32,
+                          color: AppColors.primary,
+                        ),
+                      ),
               ),
               const SizedBox(width: 14),
 

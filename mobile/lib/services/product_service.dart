@@ -339,6 +339,7 @@ class ProductService {
     final candidateHosts = [
       'http://127.0.0.1:8000',
       'http://localhost:8000',
+      'http://10.221.235.31:8000',
       'http://10.133.121.165:8000',
       'http://10.0.2.2:8000',
     ];

@@ -45,7 +45,7 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = 'Could not load messages. Please try again.';
         _isLoading = false;
       });
     }
@@ -71,13 +71,43 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update status: $e'),
+          const SnackBar(
+            content: Text('Could not update status. Please try again.'),
             backgroundColor: AppColors.error,
           ),
         );
       }
     }
+  }
+
+  void _simulateCall(String phone, String name) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.phone_in_talk, color: Colors.white),
+            const SizedBox(width: 8),
+            Text('Calling $name ($phone)...'),
+          ],
+        ),
+        backgroundColor: AppColors.primaryDark,
+      ),
+    );
+  }
+
+  void _simulateWhatsApp(String phone, String name) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.chat_bubble_rounded, color: Colors.white),
+            const SizedBox(width: 8),
+            Text('Opening WhatsApp chat with $name...'),
+          ],
+        ),
+        backgroundColor: const Color(0xFF25D366),
+      ),
+    );
   }
 
   @override
@@ -117,7 +147,7 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
           // Inquiries Feed
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
@@ -131,7 +161,7 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _fetchInquiries,
-                                child: const Text('Retry'),
+                                child: const Text('Try Again'),
                               ),
                             ],
                           ),
@@ -284,21 +314,56 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
             if (inq.message != null && inq.message!.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(10),
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Text(
                   '"${inq.message}"',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade800),
+                  style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey.shade800),
                 ),
               ),
             ],
-
             const SizedBox(height: 14),
 
-            // Action Buttons
+            // Quick Call & WhatsApp Action Bar
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryDark,
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.phone, size: 16),
+                    label: const Text('Call', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _simulateCall(inq.buyerPhone, inq.buyerName),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2E7D32),
+                      side: const BorderSide(color: Color(0xFF2E7D32)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.chat_rounded, size: 16),
+                    label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _simulateWhatsApp(inq.buyerPhone, inq.buyerName),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Status Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -310,15 +375,19 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: () => _updateStatus(inq, 'contacted'),
-                    icon: const Icon(Icons.phone_in_talk, size: 16),
+                    icon: const Icon(Icons.check, size: 16),
                     label: const Text('Mark Contacted', style: TextStyle(fontSize: 12)),
                   ),
                 ] else if (inq.status == 'contacted') ...[
                   ElevatedButton.icon(
                     onPressed: () => _updateStatus(inq, 'accepted'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                    icon: const Icon(Icons.check, size: 16),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                    icon: const Icon(Icons.verified, size: 16),
                     label: const Text('Accept Deal', style: TextStyle(fontSize: 12)),
                   ),
                 ],
@@ -345,3 +414,4 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
     }
   }
 }
+

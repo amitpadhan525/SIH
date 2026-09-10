@@ -43,6 +43,9 @@ class _AddProductScreenState extends State<AddProductScreen>
 
   AddProductStage _currentStage = AddProductStage.captureAndSpeak;
 
+  // Selected Speech Language
+  String _selectedSpeechLanguage = 'auto'; // 'or', 'hi', 'en', 'auto'
+
   // Photo State
   Uint8List? _photoBytes;
   String? _photoFilename;
@@ -56,7 +59,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   final TextEditingController _transcriptController = TextEditingController();
 
   // AI Processing State
-  String _aiProcessingStep = 'Analyzing photo & speech...';
+  String _aiProcessingStep = 'Understanding your product...';
   bool _isSubmitting = false;
 
   // Extracted Product Information
@@ -71,7 +74,7 @@ class _AddProductScreenState extends State<AddProductScreen>
       'Based on authentic handcrafted materials, artisanal labor, and fair market margin.';
   Map<String, dynamic>? _fullAiResult;
 
-  // Quick Demo Samples for Evaluators
+  // Quick Demo Samples for Evaluators & Testing
   static const Map<String, Map<String, String>> _demoPresets = {
     '🌾 Sambalpuri Saree (English)': {
       'text':
@@ -161,8 +164,8 @@ class _AddProductScreenState extends State<AddProductScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not access ${source == ImageSource.camera ? "camera" : "gallery"}: $e'),
+          const SnackBar(
+            content: Text('Could not open camera or gallery. Please try again.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -176,17 +179,10 @@ class _AddProductScreenState extends State<AddProductScreen>
       _photoFilename = 'demo_craft.jpg';
       _photoSourceLabel = label;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Selected photo preset: $label 📸'),
-        backgroundColor: AppColors.primaryDark,
-        duration: const Duration(seconds: 1),
-      ),
-    );
   }
 
   // ----------------------------------------------------
-  // VOICE RECORDING & SPEECH HANDLING
+  // VOICE RECORDING & AUTOMATIC AI TRIGGER
   // ----------------------------------------------------
   Future<void> _toggleRecording() async {
     if (_isRecording) {
@@ -219,7 +215,7 @@ class _AddProductScreenState extends State<AddProductScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Microphone permission required to record speech.'),
+              content: Text('Microphone permission needed to record speech.'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -260,7 +256,7 @@ class _AddProductScreenState extends State<AddProductScreen>
       _pulseController.stop();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Recording failed: $e'), backgroundColor: AppColors.error),
+          const SnackBar(content: Text('Please try speaking again.'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -281,14 +277,14 @@ class _AddProductScreenState extends State<AddProductScreen>
 
     final finalPath = audioPath ?? _recordedFilePath;
 
-    // Transcribe speech
+    // Automatically transition to AI processing
     await _transcribeAndRunAi(finalPath);
   }
 
   Future<void> _transcribeAndRunAi(String? filePath) async {
     setState(() {
       _currentStage = AddProductStage.aiProcessing;
-      _aiProcessingStep = '🎙️ Transcribing voice (English / Hindi / Odia)...';
+      _aiProcessingStep = 'Listening to your speech...';
     });
 
     String transcript = _transcriptController.text.trim();
@@ -308,15 +304,14 @@ class _AddProductScreenState extends State<AddProductScreen>
           }
         }
       } catch (e) {
-        // If audio transcription had error, continue with existing text or default
         if (transcript.isEmpty) {
-          transcript = 'This is a handwoven Sambalpuri cotton craft made over 3 days.';
+          transcript = 'Handwoven handicraft made with traditional craftsmanship.';
         }
       }
     }
 
     if (transcript.isEmpty) {
-      transcript = 'This is a handwoven Sambalpuri cotton craft made over 3 days.';
+      transcript = 'Handwoven handicraft made with traditional craftsmanship.';
       _transcriptController.text = transcript;
     }
 
@@ -324,12 +319,12 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 
   // ----------------------------------------------------
-  // MULTIMODAL AI EXTRACTION & PRICE RECOMMENDATION
+  // MULTIMODAL AI EXTRACTION & FAIR PRICE
   // ----------------------------------------------------
   Future<void> _executeAiExtraction(String transcript) async {
     setState(() {
       _currentStage = AddProductStage.aiProcessing;
-      _aiProcessingStep = '🧠 Extracting craft materials & technique...';
+      _aiProcessingStep = 'Understanding your product & materials...';
     });
 
     try {
@@ -337,12 +332,12 @@ class _AddProductScreenState extends State<AddProductScreen>
         await Future.delayed(const Duration(milliseconds: 300));
       }
       setState(() {
-        _aiProcessingStep = '💡 Calculating fair AI Recommended Price...';
+        _aiProcessingStep = 'Calculating a fair price for your work...';
       });
 
       final aiResult = await _productService.autoExtractAndPrice(
         transcript,
-        sourceLanguage: 'auto',
+        sourceLanguage: _selectedSpeechLanguage,
         targetLanguages: ['en', 'hi', 'or'],
       );
 
@@ -352,7 +347,7 @@ class _AddProductScreenState extends State<AddProductScreen>
 
       final name = facts['product_name']?.toString() ??
           enContent['title']?.toString() ??
-          'Handcrafted Artisanal Product';
+          'Handcrafted Product';
 
       final cat = facts['category']?.toString() ?? 'Handicraft';
       final materialsList = facts['materials'] as List<dynamic>?;
@@ -386,19 +381,19 @@ class _AddProductScreenState extends State<AddProductScreen>
         });
       }
     } catch (_) {
-      // Fallback extraction
+      // Fallback
       if (mounted) {
         setState(() {
-          _productName = 'Sambalpuri Handwoven Cotton Scarf';
+          _productName = 'Handcrafted Artisan Craft';
           _category = 'Handloom & Textiles';
-          _material = 'Organic Cotton';
-          _craftTechnique = 'Sambalpuri Handloom';
+          _material = 'Natural Materials';
+          _craftTechnique = 'Traditional Handcraft';
           _productionDays = 3;
           _description =
-              'Traditional handwoven Sambalpuri craft made with natural cotton and authentic heritage patterns.';
+              'Traditional craft made with natural materials and authentic heritage patterns.';
           _recommendedPrice = 1850.0;
           _pricingRationale =
-              'Based on organic cotton material, 3 days hand craftsmanship, and competitive market benchmarks.';
+              'Based on organic materials, 3 days hand craftsmanship, and fair living wages.';
           _currentStage = AddProductStage.reviewAndPublish;
         });
       }
@@ -426,7 +421,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     setState(() => _isSubmitting = true);
 
     try {
-      // 1. Create product on backend
       final newProduct = Product(
         artisanId: ApiConstants.defaultArtisanId,
         name: _productName.isNotEmpty ? _productName : 'Handcrafted Product',
@@ -439,7 +433,6 @@ class _AddProductScreenState extends State<AddProductScreen>
 
       final created = await _productService.createProduct(newProduct);
 
-      // 2. Upload photo if available
       if (created.id != null && _photoBytes != null && _photoBytes!.isNotEmpty) {
         try {
           await _productService.uploadProductImage(
@@ -448,9 +441,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             _photoFilename ?? 'product_photo.jpg',
             backgroundMode: 'white',
           );
-        } catch (_) {
-          // Non-fatal if image upload encounters network issue
-        }
+        } catch (_) {}
       }
 
       if (mounted) {
@@ -460,10 +451,10 @@ class _AddProductScreenState extends State<AddProductScreen>
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white),
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('🎉 ${_productName} published to live Marketplace!'),
+                  child: Text('🎉 Your product is now live for buyers!'),
                 ),
               ],
             ),
@@ -478,8 +469,8 @@ class _AddProductScreenState extends State<AddProductScreen>
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to publish product: $e'),
+          const SnackBar(
+            content: Text('Could not publish product. Please try again.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -520,7 +511,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      '✏️ Edit Product Details',
+                      '✏️ Edit Details',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -595,7 +586,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                   controller: descCtrl,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Description / Story',
+                    labelText: 'Description',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -669,7 +660,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 
   // ====================================================
-  // STAGE 1: CAPTURE PHOTO + VOICE INPUT
+  // STAGE 1: CAPTURE PHOTO + SPEAK
   // ====================================================
   Widget _buildCaptureAndSpeakStage() {
     final hasPhoto = _photoBytes != null && _photoBytes!.isNotEmpty;
@@ -679,23 +670,18 @@ class _AddProductScreenState extends State<AddProductScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // PS-90 Banner
+          // Clear visual banner
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withOpacity(0.12),
-                  AppColors.primaryLight,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.primary.withOpacity(0.25)),
             ),
             child: const Row(
               children: [
-                Text('✨', style: TextStyle(fontSize: 24)),
-                SizedBox(width: 12),
+                Text('✨', style: TextStyle(fontSize: 26)),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,14 +689,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                       Text(
                         '1-Tap AI Listing & Fair Pricing',
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.primaryDark,
                         ),
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Take a photo, speak naturally in Odia/Hindi/English, and AI does everything.',
+                        'Take a photo, speak about your craft, and AI does everything.',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
@@ -728,11 +714,11 @@ class _AddProductScreenState extends State<AddProductScreen>
             '1. Product Photo 📸',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           if (hasPhoto) ...[
             Container(
@@ -790,10 +776,10 @@ class _AddProductScreenState extends State<AddProductScreen>
               child: Column(
                 children: [
                   const Icon(Icons.camera_alt_outlined, size: 48, color: AppColors.primary),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const Text(
-                    'Add a photo of your craft',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    'Take a photo of your product',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -804,9 +790,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.camera_alt),
-                          label: const Text('Take Photo'),
+                          label: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () => _pickImage(ImageSource.camera),
                         ),
                       ),
@@ -817,9 +804,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                             foregroundColor: AppColors.primary,
                             side: const BorderSide(color: AppColors.primary, width: 1.5),
                             padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.photo_library),
-                          label: const Text('Gallery'),
+                          label: const Text('Gallery', style: TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () => _pickImage(ImageSource.gallery),
                         ),
                       ),
@@ -832,20 +820,29 @@ class _AddProductScreenState extends State<AddProductScreen>
           const SizedBox(height: 24),
 
           // ------------------------------------------------
-          // 2. VOICE INPUT SECTION
+          // 2. VOICE SECTION WITH LANGUAGE SELECTOR
           // ------------------------------------------------
           const Text(
             '2. Speak & Auto-Fill 🎙️',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 4),
           const Text(
-            'Speak naturally in Odia, Hindi, or English about your craft, materials, and days taken.',
+            'Tell us about your craft, materials, and time taken.',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 10),
+
+          // Simple Native Language Pills
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLanguagePill('auto', 'Odia / हिन्दी / English'),
+            ],
           ),
           const SizedBox(height: 12),
 
@@ -871,14 +868,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                       return Transform.scale(
                         scale: scale,
                         child: Container(
-                          width: 84,
-                          height: 84,
+                          width: 88,
+                          height: 88,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isRecording ? AppColors.primary : AppColors.primaryLight,
+                            color: _isRecording ? Colors.red.shade600 : AppColors.primary,
                             boxShadow: [
                               BoxShadow(
-                                color: (_isRecording ? AppColors.primary : AppColors.primaryDark)
+                                color: (_isRecording ? Colors.red : AppColors.primaryDark)
                                     .withOpacity(0.35),
                                 blurRadius: _isRecording ? 20 : 10,
                                 spreadRadius: _isRecording ? 6 : 2,
@@ -887,8 +884,8 @@ class _AddProductScreenState extends State<AddProductScreen>
                           ),
                           child: Icon(
                             _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                            size: 44,
-                            color: _isRecording ? Colors.white : AppColors.primary,
+                            size: 46,
+                            color: Colors.white,
                           ),
                         ),
                       );
@@ -903,14 +900,14 @@ class _AddProductScreenState extends State<AddProductScreen>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: _isRecording ? AppColors.primary : AppColors.textPrimary,
+                    color: _isRecording ? Colors.red.shade700 : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _isRecording
-                      ? 'Tap the red button when finished speaking'
-                      : 'Odia / हिन्दी / English',
+                      ? 'Tap red button when finished'
+                      : 'Speak naturally in your language',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
@@ -946,16 +943,16 @@ class _AddProductScreenState extends State<AddProductScreen>
               );
             }).toList(),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Main Action Button
+          // Main Action Button (also available if text is edited or manual test)
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 3,
+              elevation: 2,
             ),
             icon: const Icon(Icons.auto_awesome),
             label: const Text(
@@ -975,8 +972,34 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
+  Widget _buildLanguagePill(String langCode, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.translate_rounded, size: 16, color: AppColors.primaryDark),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ====================================================
-  // STAGE 2: AI PROCESSING ANIMATION
+  // STAGE 2: FRIENDLY HUMAN AI PROCESSING
   // ====================================================
   Widget _buildAiProcessingStage() {
     return Center(
@@ -986,8 +1009,8 @@ class _AddProductScreenState extends State<AddProductScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 100,
-              height: 100,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primaryLight,
@@ -1002,7 +1025,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             ),
             const SizedBox(height: 24),
             const Text(
-              'AI Engine Processing ✨',
+              'Preparing Your Listing ✨',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -1021,7 +1044,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             ),
             const SizedBox(height: 8),
             const Text(
-              'Extracting materials, craftsmanship hours, and calculating fair market pricing.',
+              'Please wait a moment while AI prepares your craft listing & fair price.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
@@ -1032,7 +1055,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 
   // ====================================================
-  // STAGE 3: REVIEW & PUBLISH SCREEN (PS-90 Core UX)
+  // STAGE 3: REVIEW & PUBLISH
   // ====================================================
   Widget _buildReviewAndPublishStage() {
     return SingleChildScrollView(
@@ -1194,7 +1217,7 @@ class _AddProductScreenState extends State<AddProductScreen>
           const SizedBox(height: 16),
 
           // ------------------------------------------------
-          // AI RECOMMENDED PRICE CARD (PS-90 Core Requirement)
+          // AI RECOMMENDED FAIR PRICE CARD
           // ------------------------------------------------
           Container(
             padding: const EdgeInsets.all(18),
@@ -1309,3 +1332,4 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 }
+

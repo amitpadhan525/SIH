@@ -25,8 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
   late final ProductService _productService;
   late final AuthService _authService;
   int _productCount = 0;
+  int _inquiryCount = 0;
   bool _isLoading = true;
   bool _isDbConnected = false;
+  int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -41,15 +43,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final isConnected = await _productService.checkDatabaseHealth();
       List<Product> products = [];
+      int inqCount = 0;
       if (isConnected) {
         final artisanId = _authService.currentArtisanId;
         products = await _productService.getProducts(artisanId: artisanId);
+        try {
+          final inqs = await _productService.getArtisanInquiries(artisanId ?? ApiConstants.defaultArtisanId);
+          inqCount = inqs.length;
+        } catch (_) {}
       }
 
       if (mounted) {
         setState(() {
           _isDbConnected = isConnected;
           _productCount = products.length;
+          _inquiryCount = inqCount;
           _isLoading = false;
         });
       }
@@ -93,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => InquiriesScreen(productService: _productService),
       ),
     );
+    _loadDashboardData();
   }
 
   void _navigateToMarketplace() async {
@@ -119,12 +128,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 Container(
-                  width: 54,
-                  height: 54,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.primaryLight,
-                    border: Border.all(color: AppColors.primary, width: 1.5),
+                    border: Border.all(color: AppColors.primary, width: 2),
                   ),
                   child: const Icon(
                     Icons.person_rounded,
@@ -159,27 +168,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                color: const Color(0xFFFAF7F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFEADBCE)),
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Craft Category', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      const Text('Craft', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       Text(
                         _authService.currentCraftCategory ?? 'Handicraft',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -190,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -205,10 +214,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tune_rounded, color: AppColors.textSecondary),
+              title: const Text('Server Settings (Advanced)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textSecondary),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showServerConfigDialog();
+              },
+            ),
             const Divider(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             ArtisanButton(
-              label: 'Logout from Artisan Studio',
+              label: 'Log Out',
               icon: Icons.logout_rounded,
               isOutlined: true,
               onPressed: () {
@@ -216,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _authService.logout();
               },
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -234,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter your computer backend URL (or use defaults):',
+              'Enter server base URL for local testing:',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
@@ -251,15 +271,15 @@ class _HomeScreenState extends State<HomeScreen> {
               runSpacing: 8,
               children: [
                 ActionChip(
-                  label: const Text('USB: 127.0.0.1:8000'),
+                  label: const Text('USB (127.0.0.1)'),
                   onPressed: () => controller.text = 'http://127.0.0.1:8000',
                 ),
                 ActionChip(
-                  label: const Text('Wi-Fi: 10.133.121.165:8000'),
+                  label: const Text('Wi-Fi (10.133.121.165)'),
                   onPressed: () => controller.text = 'http://10.133.121.165:8000',
                 ),
                 ActionChip(
-                  label: const Text('Emulator: 10.0.2.2:8000'),
+                  label: const Text('Emulator (10.0.2.2)'),
                   onPressed: () => controller.text = 'http://10.0.2.2:8000',
                 ),
               ],
@@ -281,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _loadDashboardData();
               }
             },
-            child: const Text('Save & Test'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -295,14 +315,52 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Artisan Studio'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Artisan Profile / Account',
+            icon: const Icon(Icons.account_circle_outlined, size: 28),
+            tooltip: 'Artisan Profile',
             onPressed: _showProfileModal,
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh Status',
-            onPressed: _loadDashboardData,
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentNavIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentNavIndex = index);
+          if (index == 1) {
+            _navigateToProducts();
+          } else if (index == 2) {
+            _navigateToMarketplace();
+          } else if (index == 3) {
+            _navigateToInquiries();
+          }
+        },
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2_rounded),
+            label: 'My Products',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront_rounded),
+            label: 'Marketplace',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: _inquiryCount > 0,
+              label: Text('$_inquiryCount'),
+              child: const Icon(Icons.chat_bubble_outline_rounded),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: _inquiryCount > 0,
+              label: Text('$_inquiryCount'),
+              child: const Icon(Icons.chat_bubble_rounded),
+            ),
+            label: 'Messages',
           ),
         ],
       ),
@@ -315,230 +373,299 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Greeting
+              // Friendly Artisan Greeting
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Namaste, ${_authService.currentArtisanName} 🙏',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Show your crafts to buyers across India with AI.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ================================================
+              // MAIN HERO ACTION CARD: ADD NEW PRODUCT
+              // ================================================
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Namaste, ${_authService.currentArtisanName} 🙏',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Welcome to your digital handicraft catalog. Manage products and reach buyers effortlessly.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Connection status badge
-                    InkWell(
-                      onTap: () => _showServerConfigDialog(),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isDbConnected
-                                    ? AppColors.success
-                                    : AppColors.error,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _isDbConnected
-                                    ? 'Connected (${ApiConstants.baseUrl})'
-                                    : 'Offline / Tap to configure server',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: _isDbConnected
-                                      ? AppColors.success
-                                      : AppColors.error,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.settings_outlined, size: 16, color: AppColors.textSecondary),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (SyncService().hasPendingActions) ...[
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        icon: const Icon(Icons.sync_rounded, size: 16, color: AppColors.primary),
-                        label: Text(
-                          'Sync (${SyncService().pendingCount})',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
-                        onPressed: () async {
-                          final artisanId = _authService.currentArtisanId ?? ApiConstants.defaultArtisanId;
-                          final res = await SyncService().flushQueue(_productService, artisanId);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(res['message']?.toString() ?? 'Offline changes synced!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                            _loadDashboardData();
-                          }
-                        },
-                      ),
-                    ],
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Quick Stats Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.storefront_rounded,
-                          size: 32,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'My Products',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w500,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _navigateToAddProduct,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                               ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.mic_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Add New Product',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
-                            const SizedBox(height: 4),
-                            _isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppColors.primary),
-                                    ),
-                                  )
-                                : Text(
-                                    '$_productCount Products',
-                                    style: const TextStyle(
-                                      fontSize: 22,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Take a photo and speak about your product.\nAI creates your description & fair price.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.92),
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.primaryDark,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 0,
+                              ),
+                              onPressed: _navigateToAddProduct,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_circle_outline_rounded, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Start (Add Product)',
+                                    style: TextStyle(
+                                      fontSize: 16,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.textPrimary,
                                     ),
                                   ),
-                          ],
-                        ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons
-              const Text(
-                'Actions',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+              // ================================================
+              // QUICK STATS & DIRECTORY
+              // ================================================
+              Row(
+                children: [
+                  // My Products Card
+                  Expanded(
+                    child: InkWell(
+                      onTap: _navigateToProducts,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.cardBorder, width: 1.2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryLight,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.inventory_2_rounded, color: AppColors.primary, size: 24),
+                            ),
+                            const SizedBox(height: 12),
+                            _isLoading
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(
+                                    '$_productCount Products',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                  ),
+                            const SizedBox(height: 2),
+                            const Text('View All Products', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Buyer Messages Card
+                  Expanded(
+                    child: InkWell(
+                      onTap: _navigateToInquiries,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.cardBorder, width: 1.2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.chat_bubble_rounded, color: Colors.green.shade800, size: 24),
+                            ),
+                            const SizedBox(height: 12),
+                            _isLoading
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(
+                                    '$_inquiryCount Messages',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                  ),
+                            const SizedBox(height: 2),
+                            const Text('Buyer Inquiries', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Marketplace Discovery Card
+              InkWell(
+                onTap: _navigateToMarketplace,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.storefront_rounded, color: Color(0xFF16A34A), size: 28),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Buyer Discovery Marketplace',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'See how buyers across India view and discover your crafts',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF374151)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: Color(0xFF16A34A)),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
-              ArtisanButton(
-                label: 'Add New Product',
-                icon: Icons.add_circle_outline_rounded,
-                onPressed: _navigateToAddProduct,
-              ),
-              const SizedBox(height: 12),
-
-              ArtisanButton(
-                label: 'View All Products',
-                icon: Icons.inventory_2_outlined,
-                isOutlined: true,
-                onPressed: _navigateToProducts,
-              ),
-              const SizedBox(height: 12),
-
-              ArtisanButton(
-                label: 'Buyer Leads & Inquiries',
-                icon: Icons.mark_email_unread_outlined,
-                isOutlined: true,
-                onPressed: _navigateToInquiries,
-              ),
-              const SizedBox(height: 12),
-
-              ArtisanButton(
-                label: '🌐 Buyer Discovery Marketplace',
-                icon: Icons.storefront_rounded,
-                isOutlined: true,
-                onPressed: _navigateToMarketplace,
-              ),
-              const SizedBox(height: 32),
-
-              // Artisan Tip
+              // Simple Artisan Tip
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0F4F8),
+                  color: const Color(0xFFFAF7F2),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFEADBCE)),
                 ),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.lightbulb_outline_rounded,
-                      color: Color(0xFF1E88E5),
-                      size: 22,
-                    ),
+                    Text('💡', style: TextStyle(fontSize: 20)),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Tip: You can create products as "Draft" and publish them when you are ready.',
+                        'Speak in your mother tongue (Odia, Hindi, or English). Tell the app about the materials, colors, and days taken to make your craft.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF37474F),
+                          color: Color(0xFF5D4037),
                           height: 1.4,
                         ),
                       ),
@@ -546,6 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -553,3 +681,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

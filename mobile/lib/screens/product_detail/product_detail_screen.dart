@@ -513,7 +513,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Icons.description_outlined),
         const SizedBox(height: 20),
 
-        // Marketplace Protocols Card
+        // National Marketplace Protocols Card
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -527,10 +527,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.hub_outlined, color: Color(0xFF16A34A), size: 20),
+                  Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 20),
                   SizedBox(width: 8),
                   Text(
-                    'Marketplace & Govt Protocols',
+                    'National Marketplace Ready',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -541,7 +541,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Export real-time standard schemas for ONDC and GeM Public Procurement.',
+                'This product is standardized for national buyer networks (ONDC & GeM Govt Procurement).',
                 style: TextStyle(fontSize: 12, color: Color(0xFF374151)),
               ),
               const SizedBox(height: 12),
@@ -550,7 +550,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-                      label: const Text('ONDC JSON', style: TextStyle(fontSize: 12)),
+                      label: const Text('ONDC JSON', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF15803D),
                         side: const BorderSide(color: Color(0xFF16A34A)),
@@ -564,7 +564,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.account_balance_outlined, size: 16),
-                      label: const Text('GeM Govt', style: TextStyle(fontSize: 12)),
+                      label: const Text('GeM Govt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF15803D),
                         side: const BorderSide(color: Color(0xFF16A34A)),

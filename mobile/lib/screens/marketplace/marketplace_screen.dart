@@ -400,7 +400,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           children: [
             // Image / Thumbnail
             Container(
-              height: 110,
+              height: 120,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: AppColors.primaryLight.withOpacity(0.4),
@@ -412,8 +412,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       child: Image.network(
                         ApiConstants.resolveImageUrl(p.imageUrls.first),
                         fit: BoxFit.cover,
+                        loadingBuilder: (ctx, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          );
+                        },
                         errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.image_outlined, size: 36, color: Colors.grey),
+                          child: Icon(Icons.photo_outlined, size: 36, color: Colors.grey),
                         ),
                       ),
                     )
