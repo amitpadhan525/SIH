@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: artisan_ai_prod_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-artisan_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-artisan_secure_pass_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-artisan_ai_prod}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-artisan_admin} -d ${POSTGRES_DB:-artisan_ai_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: artisan_ai_prod_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-artisan_admin}:${POSTGRES_PASSWORD:-artisan_secure_pass_2024}@postgres:5432/${POSTGRES_DB:-artisan_ai_prod}
+      - SECRET_KEY=${SECRET_KEY:-sih-artisan-ai-super-secret-key-production-32-chars}
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=["*"]
+      - UPLOAD_DIR=/app/backend/uploads
+    volumes:
+      - media_uploads:/app/backend/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: artisan_ai_prod_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    driver: local
+  media_uploads:
+    driver: local
