@@ -115,25 +115,44 @@ To enable local speech-to-text recognition with Whisper:
 
 ---
 
-## 💻 Quick Start Commands
+## 📴 100% Offline Setup & Local Deployment
 
-### 1. Database & Backend
+Artisan AI can run completely offline with zero external cloud dependencies.
+
+👉 **Full Step-by-Step Guide**: See [`docs/offline_setup.md`](docs/offline_setup.md)
+
+### Quick Offline Start (3 Commands):
+
 ```bash
-cd /home/amit/github/SIH
-docker-compose up -d
-source backend/.venv/bin/activate
-PYTHONPATH=. uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+# 1. Start Local Postgres Database
+docker-compose up -d postgres
+
+# 2. Run Local Backend Server
+PYTHONPATH=. backend/.venv/bin/uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# 3. Tunnel to Android Phone over USB (Zero internet needed)
+adb reverse tcp:8000 tcp:8000
 ```
 
-### 2. Run All Backend Tests
+---
+
+## 💻 Developer & Evaluation Commands
+
+### 1. Run All Backend Tests
 ```bash
 PYTHONPATH=. backend/.venv/bin/pytest backend/tests -v
 ```
 
-### 3. Run All Flutter Tests & Analyzer
+### 2. Run All Flutter Tests & Analyzer
 ```bash
-cd /home/amit/github/SIH/mobile
-export PATH="/home/amit/development/flutter/bin:$PATH"
-flutter test
-flutter analyze
+cd mobile
+/home/amit/development/flutter/bin/flutter test
+/home/amit/development/flutter/bin/flutter analyze
+```
+
+### 3. Build & Install Release APK
+```bash
+cd mobile
+/home/amit/development/flutter/bin/flutter build apk --release
+adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
