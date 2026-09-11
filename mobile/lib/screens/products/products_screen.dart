@@ -3,6 +3,7 @@ import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/models/product.dart';
 import 'package:artisan_mobile/screens/add_product/add_product_screen.dart';
 import 'package:artisan_mobile/screens/product_detail/product_detail_screen.dart';
+import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
 import 'package:artisan_mobile/widgets/artisan_button.dart';
 import 'package:artisan_mobile/widgets/error_view.dart';
@@ -11,8 +12,9 @@ import 'package:artisan_mobile/widgets/product_card.dart';
 
 class ProductsScreen extends StatefulWidget {
   final ProductService? productService;
+  final AuthService? authService;
 
-  const ProductsScreen({super.key, this.productService});
+  const ProductsScreen({super.key, this.productService, this.authService});
 
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
@@ -20,6 +22,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   late final ProductService _productService;
+  late final AuthService _authService;
   List<Product> _products = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -29,6 +32,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     _productService = widget.productService ?? ProductService();
+    _authService = widget.authService ?? AuthService(apiClient: _productService.apiClient);
     _fetchProducts();
   }
 
@@ -43,6 +47,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           _selectedStatusFilter == 'all' ? null : _selectedStatusFilter;
       final products = await _productService.getProducts(
         status: statusParam,
+        artisanId: _authService.currentArtisanId,
         pageSize: 50,
       );
 
@@ -75,7 +80,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => AddProductScreen(productService: _productService),
+        builder: (context) => AddProductScreen(
+          productService: _productService,
+          authService: _authService,
+        ),
       ),
     );
 

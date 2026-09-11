@@ -3,12 +3,18 @@ import 'package:artisan_mobile/core/constants/api_constants.dart';
 import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/core/utils/currency_formatter.dart';
 import 'package:artisan_mobile/models/inquiry.dart';
+import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
 
 class InquiriesScreen extends StatefulWidget {
   final ProductService? productService;
+  final AuthService? authService;
 
-  const InquiriesScreen({super.key, this.productService});
+  const InquiriesScreen({
+    super.key,
+    this.productService,
+    this.authService,
+  });
 
   @override
   State<InquiriesScreen> createState() => _InquiriesScreenState();
@@ -16,6 +22,7 @@ class InquiriesScreen extends StatefulWidget {
 
 class _InquiriesScreenState extends State<InquiriesScreen> {
   late final ProductService _productService;
+  late final AuthService _authService;
   List<Inquiry> _inquiries = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -25,6 +32,7 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
   void initState() {
     super.initState();
     _productService = widget.productService ?? ProductService();
+    _authService = widget.authService ?? AuthService();
     _fetchInquiries();
   }
 
@@ -35,8 +43,9 @@ class _InquiriesScreenState extends State<InquiriesScreen> {
     });
 
     try {
+      final artisanId = _authService.currentArtisanId ?? ApiConstants.defaultArtisanId;
       final rawList = await _productService.getArtisanInquiries(
-        ApiConstants.defaultArtisanId,
+        artisanId,
         status: _selectedFilter == 'all' ? null : _selectedFilter,
       );
       setState(() {

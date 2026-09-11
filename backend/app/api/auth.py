@@ -353,20 +353,20 @@ def update_profile(
             detail="Craft category cannot be empty.",
         )
 
-    state_val = request.state.strip()
-    district_val = request.district.strip()
-    if not state_val or not district_val:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="State and District are required.",
-        )
+    state_val = request.state.strip() if request.state and request.state.strip() else current_artisan.state
+    district_val = request.district.strip() if request.district and request.district.strip() else current_artisan.district
 
     pref_lang = request.preferred_language.strip() if request.preferred_language else "hi"
 
     # Update User model
     current_user.name = full_name
     current_user.language = pref_lang.lower()
-    current_user.location = f"{district_val}, {state_val}"
+    if district_val and state_val:
+        current_user.location = f"{district_val}, {state_val}"
+    elif state_val:
+        current_user.location = state_val
+    elif district_val:
+        current_user.location = district_val
     db.add(current_user)
 
     # Update Artisan model
@@ -375,10 +375,14 @@ def update_profile(
     current_artisan.state = state_val
     current_artisan.district = district_val
     current_artisan.preferred_language = pref_lang
-    current_artisan.artisan_name = request.artisan_name.strip() if request.artisan_name and request.artisan_name.strip() else None
-    current_artisan.artisan_type = request.artisan_type.strip() if request.artisan_type and request.artisan_type.strip() else None
-    current_artisan.experience_years = request.experience_years
-    current_artisan.description = request.description.strip() if request.description and request.description.strip() else None
+    if request.artisan_name is not None:
+        current_artisan.artisan_name = request.artisan_name.strip() if request.artisan_name.strip() else None
+    if request.artisan_type is not None:
+        current_artisan.artisan_type = request.artisan_type.strip() if request.artisan_type.strip() else None
+    if request.experience_years is not None:
+        current_artisan.experience_years = request.experience_years
+    if request.description is not None:
+        current_artisan.description = request.description.strip() if request.description.strip() else None
     current_artisan.is_profile_complete = True
     db.add(current_artisan)
 

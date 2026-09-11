@@ -93,15 +93,51 @@ void main() {
       expect(await storage.read('artisan_jwt_token'), isNull);
     });
 
+    test('Offline or network failure on loadSavedSession preserves cached session', () async {
+      final storage = InMemoryTokenStorage();
+      await storage.write('artisan_jwt_token', 'cached_jwt_token_888');
+      await storage.write(
+        'artisan_user_profile',
+        jsonEncode({
+          'user_id': 88,
+          'artisan_id': 88,
+          'name': 'Lakshmi Devi',
+          'phone': '+919123456780',
+          'role': 'artisan',
+          'is_profile_complete': true,
+          'craft_category': 'Wood Carving',
+        }),
+      );
+
+      final mockClient = MockClient((request) async {
+        throw Exception('No internet connection');
+      });
+
+      final authService = AuthService(
+        apiClient: ApiClient(client: mockClient),
+        storage: storage,
+      );
+
+      final restored = await authService.loadSavedSession();
+      expect(restored, isTrue);
+      expect(authService.isAuthenticated, isTrue);
+      expect(authService.currentArtisanName, equals('Lakshmi Devi'));
+      expect(authService.currentArtisanPhone, equals('+919123456780'));
+      expect(authService.isProfileComplete, isTrue);
+      expect(await storage.read('artisan_jwt_token'), equals('cached_jwt_token_888'));
+    });
+
     test('Logout clears session from secure storage', () async {
       final storage = InMemoryTokenStorage();
       await storage.write('artisan_jwt_token', 'active_token_999');
+      await storage.write('artisan_user_profile', '{"name":"Artisan"}');
 
       final authService = AuthService(storage: storage);
       authService.logout();
 
       expect(authService.isAuthenticated, isFalse);
       expect(await storage.read('artisan_jwt_token'), isNull);
+      expect(await storage.read('artisan_user_profile'), isNull);
     });
   });
 }

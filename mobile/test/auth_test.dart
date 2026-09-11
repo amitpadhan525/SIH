@@ -222,6 +222,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Enter phone number
+      await tester.enterText(find.byType(TextField).first, '+919876543210');
+      await tester.pumpAndSettle();
+
       // Tap Request OTP Code
       await tester.tap(find.text('Request OTP Code'));
       await tester.pumpAndSettle();

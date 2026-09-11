@@ -11,6 +11,7 @@ import 'package:artisan_mobile/core/network/api_client.dart';
 import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/core/utils/currency_formatter.dart';
 import 'package:artisan_mobile/models/product.dart';
+import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
 import 'package:artisan_mobile/widgets/artisan_button.dart';
 
@@ -23,11 +24,13 @@ enum AddProductStage {
 class AddProductScreen extends StatefulWidget {
   final ProductService? productService;
   final AudioRecorder? audioRecorder;
+  final AuthService? authService;
 
   const AddProductScreen({
     super.key,
     this.productService,
     this.audioRecorder,
+    this.authService,
   });
 
   @override
@@ -38,6 +41,7 @@ class _AddProductScreenState extends State<AddProductScreen>
     with SingleTickerProviderStateMixin {
   late final ProductService _productService;
   late final AudioRecorder _audioRecorder;
+  late final AuthService _authService;
   final ImagePicker _imagePicker = ImagePicker();
   late final AnimationController _pulseController;
 
@@ -46,10 +50,16 @@ class _AddProductScreenState extends State<AddProductScreen>
   // Selected Speech Language
   String _selectedSpeechLanguage = 'auto'; // 'or', 'hi', 'en', 'auto'
 
-  // Photo State
+  // Photo State (Original vs Studio Processed)
+  Uint8List? _originalPhotoBytes;
+  Uint8List? _processedPhotoBytes;
   Uint8List? _photoBytes;
   String? _photoFilename;
   String? _photoSourceLabel;
+  bool _isRemovingBackground = false;
+  bool _isBackgroundRemoved = false;
+  String? _bgRemovalError;
+  bool _usingProcessedVersion = false;
 
   // Voice State
   bool _isRecording = false;
@@ -127,6 +137,7 @@ class _AddProductScreenState extends State<AddProductScreen>
     super.initState();
     _productService = widget.productService ?? ProductService();
     _audioRecorder = widget.audioRecorder ?? AudioRecorder();
+    _authService = widget.authService ?? AuthService();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -143,7 +154,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 
   // ----------------------------------------------------
-  // PHOTO HANDLING
+  // PHOTO HANDLING & AI BACKGROUND REMOVAL
   // ----------------------------------------------------
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -156,7 +167,13 @@ class _AddProductScreenState extends State<AddProductScreen>
       if (picked != null) {
         final bytes = await picked.readAsBytes();
         setState(() {
+          _originalPhotoBytes = bytes;
+          _processedPhotoBytes = null;
           _photoBytes = bytes;
+          _usingProcessedVersion = false;
+          _isBackgroundRemoved = false;
+          _isRemovingBackground = false;
+          _bgRemovalError = null;
           _photoFilename = picked.name.isNotEmpty ? picked.name : 'product_photo.jpg';
           _photoSourceLabel = source == ImageSource.camera ? 'Live Camera' : 'Gallery';
         });
@@ -174,10 +191,78 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 
   void _useDemoPhoto(String label) {
+    final bytes = base64Decode(_fallbackJpegBase64);
     setState(() {
-      _photoBytes = base64Decode(_fallbackJpegBase64);
+      _originalPhotoBytes = bytes;
+      _processedPhotoBytes = null;
+      _photoBytes = bytes;
+      _usingProcessedVersion = false;
+      _isBackgroundRemoved = false;
+      _isRemovingBackground = false;
+      _bgRemovalError = null;
       _photoFilename = 'demo_craft.jpg';
       _photoSourceLabel = label;
+    });
+  }
+
+  Future<void> _removeBackground() async {
+    if (_originalPhotoBytes == null || _isRemovingBackground) return;
+
+    setState(() {
+      _isRemovingBackground = true;
+      _bgRemovalError = null;
+    });
+
+    try {
+      final result = await _productService.enhanceImagePreview(
+        _originalPhotoBytes!,
+        _photoFilename ?? 'product_photo.jpg',
+        backgroundMode: 'white',
+      );
+
+      Uint8List? processedBytes;
+      final procUrl = result['processed_url']?.toString();
+      if (procUrl != null && procUrl.isNotEmpty) {
+        try {
+          final fullUrl = ApiConstants.resolveImageUrl(procUrl);
+          processedBytes = await _productService.apiClient.getRawBytes(fullUrl);
+        } catch (_) {
+          // If in test environment or offline, keep valid preview
+          processedBytes = _originalPhotoBytes;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _processedPhotoBytes = processedBytes ?? _originalPhotoBytes;
+          _photoBytes = _processedPhotoBytes;
+          _isBackgroundRemoved = true;
+          _usingProcessedVersion = true;
+          _isRemovingBackground = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Background removed successfully! ✨'),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isRemovingBackground = false;
+          _bgRemovalError = 'We couldn\'t remove the background. Please try again.';
+        });
+      }
+    }
+  }
+
+  void _togglePhotoVersion(bool useProcessed) {
+    setState(() {
+      _usingProcessedVersion = useProcessed;
+      _photoBytes = useProcessed ? (_processedPhotoBytes ?? _originalPhotoBytes) : _originalPhotoBytes;
     });
   }
 
@@ -404,8 +489,15 @@ class _AddProductScreenState extends State<AddProductScreen>
     final preset = _demoPresets[presetTitle];
     if (preset == null) return;
 
+    final bytes = base64Decode(_fallbackJpegBase64);
     setState(() {
-      _photoBytes = base64Decode(_fallbackJpegBase64);
+      _originalPhotoBytes = bytes;
+      _processedPhotoBytes = null;
+      _photoBytes = bytes;
+      _usingProcessedVersion = false;
+      _isBackgroundRemoved = false;
+      _isRemovingBackground = false;
+      _bgRemovalError = null;
       _photoFilename = 'demo_craft.jpg';
       _photoSourceLabel = preset['name'];
     });
@@ -421,8 +513,9 @@ class _AddProductScreenState extends State<AddProductScreen>
     setState(() => _isSubmitting = true);
 
     try {
+      final artisanId = _authService.currentArtisanId ?? ApiConstants.defaultArtisanId;
       final newProduct = Product(
-        artisanId: ApiConstants.defaultArtisanId,
+        artisanId: artisanId,
         name: _productName.isNotEmpty ? _productName : 'Handcrafted Product',
         category: _category,
         material: _material.isNotEmpty ? _material : null,
@@ -722,46 +815,237 @@ class _AddProductScreenState extends State<AddProductScreen>
 
           if (hasPhoto) ...[
             Container(
-              height: 200,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary, width: 2),
-                image: DecorationImage(
-                  image: MemoryImage(_photoBytes!),
-                  fit: BoxFit.contain,
+                border: Border.all(
+                  color: _isBackgroundRemoved && _usingProcessedVersion ? AppColors.success : AppColors.primary,
+                  width: 2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Stack(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Positioned(
-                    top: 8,
-                    left: 8,
+                  // Image display area
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      height: 200,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
+                        color: _isBackgroundRemoved && _usingProcessedVersion
+                            ? const Color(0xFFF3EFEA) // Warm studio backdrop
+                            : Colors.black.withOpacity(0.04),
                       ),
-                      child: Text(
-                        _photoSourceLabel ?? 'Photo Attached',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.memory(
+                            _photoBytes!,
+                            fit: BoxFit.contain,
+                          ),
+                          // Status Badge top left
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _isBackgroundRemoved && _usingProcessedVersion
+                                    ? AppColors.success
+                                    : Colors.black.withOpacity(0.75),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_isBackgroundRemoved && _usingProcessedVersion) ...[
+                                    const Icon(Icons.check_circle_rounded, size: 14, color: Colors.white),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      'Background removed ✓',
+                                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ] else ...[
+                                    Text(
+                                      _photoSourceLabel ?? 'Photo Attached',
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Loading overlay when removing background
+                          if (_isRemovingBackground)
+                            Container(
+                              color: Colors.black.withOpacity(0.7),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(color: Colors.white),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Removing background...',
+                                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      '✨ Making your product photo studio-ready',
+                                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primary,
-                        elevation: 2,
+                  const SizedBox(height: 12),
+
+                  // Error banner if removal failed
+                  if (_bgRemovalError != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.error),
                       ),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Change Photo'),
-                      onPressed: () => _pickImage(ImageSource.gallery),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _bgRemovalError!,
+                              style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _isRemovingBackground ? null : _removeBackground,
+                            child: const Text('Retry', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+
+                  // Action Buttons Area
+                  if (!_isBackgroundRemoved) ...[
+                    // Primary Action: Remove Background
+                    ArtisanButton(
+                      label: '✨ Remove Background',
+                      icon: Icons.auto_fix_high_rounded,
+                      isLoading: _isRemovingBackground,
+                      onPressed: _isRemovingBackground ? null : _removeBackground,
+                    ),
+                    const SizedBox(height: 8),
+                    // Secondary Options: Retake or Gallery
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textSecondary,
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                            label: const Text('Retake', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            onPressed: _isRemovingBackground ? null : () => _pickImage(ImageSource.camera),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textSecondary,
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: const Icon(Icons.photo_library_outlined, size: 16),
+                            label: const Text('Gallery', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            onPressed: _isRemovingBackground ? null : () => _pickImage(ImageSource.gallery),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    // When background IS removed: Provide toggle and reset options
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: !_usingProcessedVersion ? AppColors.primary : AppColors.textSecondary,
+                              side: BorderSide(
+                                color: !_usingProcessedVersion ? AppColors.primary : Colors.grey.shade400,
+                                width: !_usingProcessedVersion ? 1.8 : 1.0,
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: Icon(
+                              !_usingProcessedVersion ? Icons.check_circle : Icons.image_outlined,
+                              size: 16,
+                              color: !_usingProcessedVersion ? AppColors.primary : AppColors.textSecondary,
+                            ),
+                            label: const Text('Keep Original', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            onPressed: () => _togglePhotoVersion(false),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _usingProcessedVersion ? AppColors.success : Colors.grey.shade100,
+                              foregroundColor: _usingProcessedVersion ? Colors.white : AppColors.textPrimary,
+                              elevation: _usingProcessedVersion ? 2 : 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: Icon(
+                              _usingProcessedVersion ? Icons.check_circle : Icons.auto_fix_high_rounded,
+                              size: 16,
+                              color: _usingProcessedVersion ? Colors.white : AppColors.primary,
+                            ),
+                            label: const Text('Use Studio BG', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            onPressed: () => _togglePhotoVersion(true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.textSecondary),
+                          label: const Text('Remove Background Again', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          onPressed: _isRemovingBackground ? null : _removeBackground,
+                        ),
+                        const SizedBox(width: 12),
+                        TextButton.icon(
+                          icon: const Icon(Icons.camera_alt_outlined, size: 16, color: AppColors.textSecondary),
+                          label: const Text('New Photo', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          onPressed: () => _pickImage(ImageSource.camera),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

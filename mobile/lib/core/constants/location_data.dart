@@ -2,11 +2,15 @@
 class LocationData {
   static const List<String> craftCategories = [
     'Handloom',
-    'Handicraft',
     'Pottery',
+    'Wood Craft',
+    'Metal Craft',
+    'Bamboo Craft',
+    'Jewellery',
+    'Painting',
+    'Handicraft',
     'Woodwork',
     'Metalwork',
-    'Jewellery',
     'Other',
   ];
 
@@ -14,14 +18,23 @@ class LocationData {
     'Odia',
     'Hindi',
     'English',
+    'Bengali',
+    'Telugu',
+    'Tamil',
+    'Marathi',
+    'Gujarati',
+    'Kannada',
     'Other',
   ];
 
   static const List<String> artisanTypes = [
     'Individual',
-    'Self-help group',
+    'SHG',
     'Cooperative',
+    'Family Business',
+    'Self-help group',
     'Small business',
+    'Other',
   ];
 
   static const Map<String, List<String>> stateDistricts = {

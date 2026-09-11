@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
@@ -76,6 +77,39 @@ class ApiClient {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Unexpected network error: $e');
+    }
+  }
+
+  /// Downloads raw byte content (such as images/audio) from a URL
+  Future<Uint8List> getRawBytes(
+    String url, {
+    Map<String, String>? headers,
+    Duration? timeout,
+  }) async {
+    try {
+      final uri = Uri.parse(url);
+      final combinedHeaders = {..._headers, ...(headers ?? {})};
+      final response = await _client
+          .get(uri, headers: combinedHeaders)
+          .timeout(timeout ?? _defaultTimeout);
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      throw ApiException('Failed to download file (HTTP ${response.statusCode})', statusCode: response.statusCode);
+    } on SocketException {
+      throw ApiException(
+        'Unable to connect to server. Please check your connection.',
+        statusCode: 0,
+      );
+    } on TimeoutException {
+      throw ApiException(
+        'Connection timed out while downloading file.',
+        statusCode: 408,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error downloading file: $e');
     }
   }
 

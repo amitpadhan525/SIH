@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -14,7 +15,15 @@ abstract class SecureTokenStorage {
 class FlutterSecureTokenStorage implements SecureTokenStorage {
   final FlutterSecureStorage _storage;
   FlutterSecureTokenStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+              ),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock,
+              ),
+            );
 
   @override
   Future<void> write(String key, String value) async {
@@ -62,6 +71,7 @@ class InMemoryTokenStorage implements SecureTokenStorage {
 
 class AuthService extends ChangeNotifier {
   static const String _storageTokenKey = 'artisan_jwt_token';
+  static const String _storageUserKey = 'artisan_user_profile';
 
   final ApiClient _apiClient;
   final SecureTokenStorage _storage;
@@ -85,7 +95,11 @@ class AuthService extends ChangeNotifier {
     return null;
   }
 
-  String get currentArtisanName => _currentUser?['full_name']?.toString() ?? 'Artisan';
+  String get currentArtisanName =>
+      _currentUser?['full_name']?.toString() ??
+      _currentUser?['name']?.toString() ??
+      _currentUser?['artisan_name']?.toString() ??
+      'Artisan';
   String get currentArtisanPhone => _currentUser?['phone']?.toString() ?? '';
   String? get currentCraftCategory => _currentUser?['craft_category']?.toString();
   String? get currentState => _currentUser?['state']?.toString();
@@ -112,7 +126,7 @@ class AuthService extends ChangeNotifier {
     return {
       'user_id': resMap['user_id'],
       'artisan_id': resMap['artisan_id'],
-      'full_name': resMap['name'] ?? 'Artisan User',
+      'full_name': resMap['name'] ?? resMap['full_name'] ?? 'Artisan User',
       'role': resMap['role'] ?? 'artisan',
       'phone': resMap['phone'] ?? defaultPhone ?? '',
       'is_profile_complete': isComplete,
@@ -135,14 +149,16 @@ class AuthService extends ChangeNotifier {
     await _storage.write(_storageTokenKey, token);
   }
 
-  /// Clears JWT token from secure storage
+  /// Clears JWT token and user profile from secure storage
   Future<void> clearToken() async {
     _token = null;
     _apiClient.authToken = null;
     await _storage.delete(_storageTokenKey);
+    await _storage.delete(_storageUserKey);
   }
 
-  /// Loads saved session token on startup and verifies it with /auth/me
+  /// Loads saved session token on startup and verifies it with /auth/me.
+  /// Persists authentication across app launches until manual logout or explicit 401.
   Future<bool> loadSavedSession() async {
     _isRestoring = true;
     notifyListeners();
@@ -156,16 +172,37 @@ class AuthService extends ChangeNotifier {
 
       _token = savedToken;
       _apiClient.authToken = savedToken;
-      await getMe();
+
+      final savedUserJson = await _storage.read(_storageUserKey);
+      if (savedUserJson != null && savedUserJson.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(savedUserJson) as Map<String, dynamic>;
+          _currentUser = decoded;
+        } catch (_) {}
+      }
+
+      try {
+        await getMe();
+      } on ApiException catch (e) {
+        if (e.statusCode == 401) {
+          await clearToken();
+          _currentUser = null;
+          _isRestoring = false;
+          notifyListeners();
+          return false;
+        }
+        // If it's a network/offline error, preserve session from cached user profile
+      } catch (_) {
+        // Preserve cached session when server is temporarily unreachable
+      }
+
       _isRestoring = false;
       notifyListeners();
-      return true;
+      return isAuthenticated;
     } catch (_) {
-      await clearToken();
-      _currentUser = null;
       _isRestoring = false;
       notifyListeners();
-      return false;
+      return isAuthenticated;
     }
   }
 
@@ -182,7 +219,7 @@ class AuthService extends ChangeNotifier {
     return response as Map<String, dynamic>;
   }
 
-  /// Verifies OTP code, persists JWT token to secure storage, and initializes user
+  /// Verifies OTP code, persists JWT token and profile to secure storage, and initializes user
   Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
     final cleanPhone = _normalizePhone(phone);
     final response = await _apiClient.post(
@@ -194,7 +231,9 @@ class AuthService extends ChangeNotifier {
     final token = resMap['access_token'] as String?;
     if (token != null && token.isNotEmpty) {
       await saveToken(token);
-      _currentUser = _buildUserMap(resMap, defaultPhone: cleanPhone);
+      final userMap = _buildUserMap(resMap, defaultPhone: cleanPhone);
+      _currentUser = userMap;
+      await _storage.write(_storageUserKey, jsonEncode(userMap));
       notifyListeners();
     }
     return resMap;
@@ -210,7 +249,9 @@ class AuthService extends ChangeNotifier {
       body: profileData,
     );
     final resMap = response as Map<String, dynamic>;
-    _currentUser = _buildUserMap(resMap);
+    final userMap = _buildUserMap(resMap);
+    _currentUser = userMap;
+    await _storage.write(_storageUserKey, jsonEncode(userMap));
     notifyListeners();
     return resMap;
   }
@@ -222,25 +263,29 @@ class AuthService extends ChangeNotifier {
     }
     final response = await _apiClient.get(ApiConstants.authMe);
     final resMap = response as Map<String, dynamic>;
-    _currentUser = _buildUserMap(resMap);
+    final userMap = _buildUserMap(resMap);
+    _currentUser = userMap;
+    await _storage.write(_storageUserKey, jsonEncode(userMap));
     notifyListeners();
     return resMap;
   }
 
-  /// Sets active session explicitly and persists token
+  /// Sets active session explicitly and persists token & profile
   void setSession({required String token, required Map<String, dynamic> user}) {
     _token = token;
     _apiClient.authToken = token;
     _currentUser = Map<String, dynamic>.from(user);
     _storage.write(_storageTokenKey, token);
+    _storage.write(_storageUserKey, jsonEncode(_currentUser));
     notifyListeners();
   }
 
-  /// Logs out user, clears token from secure storage, and invalidates in-memory session
+  /// Logs out user, clears token and profile from secure storage, and invalidates in-memory session
   void logout() {
     clearToken();
     _currentUser = null;
     notifyListeners();
   }
 }
+
 

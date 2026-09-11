@@ -6,6 +6,7 @@ import 'package:artisan_mobile/screens/add_product/add_product_screen.dart';
 import 'package:artisan_mobile/screens/inquiries/inquiries_screen.dart';
 import 'package:artisan_mobile/screens/marketplace/marketplace_screen.dart';
 import 'package:artisan_mobile/screens/products/products_screen.dart';
+import 'package:artisan_mobile/screens/profile/edit_profile_screen.dart';
 import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
 import 'package:artisan_mobile/services/sync_service.dart';
@@ -75,7 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => AddProductScreen(productService: _productService),
+        builder: (context) => AddProductScreen(
+          productService: _productService,
+          authService: _authService,
+        ),
       ),
     );
 
@@ -88,7 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductsScreen(productService: _productService),
+        builder: (context) => ProductsScreen(
+          productService: _productService,
+          authService: _authService,
+        ),
       ),
     );
     _loadDashboardData();
@@ -98,7 +105,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => InquiriesScreen(productService: _productService),
+        builder: (context) => InquiriesScreen(
+          productService: _productService,
+          authService: _authService,
+        ),
       ),
     );
     _loadDashboardData();
@@ -194,7 +204,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Text('Location', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       Text(
-                        '${_authService.currentDistrict ?? ''}, ${_authService.currentState ?? 'India'}',
+                        (_authService.currentDistrict != null && _authService.currentState != null)
+                            ? '${_authService.currentDistrict}, ${_authService.currentState}'
+                            : (_authService.currentState ?? 'Not set (Tap Edit Profile)'),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
                     ],
@@ -213,7 +225,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              title: const Text('Edit Profile & Location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              subtitle: const Text('Update location, craft, brand, and experience', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.primary),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final updated = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(authService: _authService),
+                  ),
+                );
+                if (updated == true && mounted) {
+                  setState(() {});
+                }
+              },
+            ),
             ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,

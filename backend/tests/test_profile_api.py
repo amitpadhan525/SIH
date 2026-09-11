@@ -139,12 +139,55 @@ def test_profile_update_validation_errors():
     assert r2.status_code == 422
 
 
+def test_three_field_onboarding_and_subsequent_location_update():
+    """Test PS-90 3-field simplified onboarding (name, craft, language) without requiring location, and editing location later."""
+    unique_phone = f"+9195{int(time.time() * 1000) % 100000000:08d}"
+    send_res = client.post("/auth/otp/send", json={"phone": unique_phone})
+    verify_res = client.post("/auth/otp/verify", json={"phone": unique_phone, "otp": send_res.json()["demo_otp"]})
+    token = verify_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Onboarding with ONLY 3 fields
+    three_field_payload = {
+        "full_name": "Sunita Devi",
+        "craft_category": "Handloom",
+        "preferred_language": "Odia"
+    }
+    onboard_res = client.put("/auth/me/profile", json=three_field_payload, headers=headers)
+    assert onboard_res.status_code == 200
+    onboard_data = onboard_res.json()
+    assert onboard_data["name"] == "Sunita Devi"
+    assert onboard_data["craft_category"] == "Handloom"
+    assert onboard_data["preferred_language"] == "Odia"
+    assert onboard_data["is_profile_complete"] is True
+
+    # 2. Later update location & optional info from Profile Settings
+    edit_payload = {
+        "full_name": "Sunita Devi",
+        "craft_category": "Handloom",
+        "preferred_language": "Odia",
+        "state": "Odisha",
+        "district": "Sambalpur",
+        "artisan_name": "Sambalpuri Handloom House",
+        "artisan_type": "SHG",
+        "experience_years": 12,
+        "description": "Authentic Sambalpuri Ikat sarees"
+    }
+    edit_res = client.put("/auth/me/profile", json=edit_payload, headers=headers)
+    assert edit_res.status_code == 200
+    edit_data = edit_res.json()
+    assert edit_data["state"] == "Odisha"
+    assert edit_data["district"] == "Sambalpur"
+    assert edit_data["artisan_name"] == "Sambalpuri Handloom House"
+    assert edit_data["artisan_type"] == "SHG"
+    assert edit_data["experience_years"] == 12
+
+
 def test_unauthenticated_profile_update_returns_401():
     """Test updating profile without JWT token returns 401."""
     res = client.put("/auth/me/profile", json={
         "full_name": "Attacker",
         "craft_category": "Jewellery",
-        "state": "Delhi",
-        "district": "New Delhi",
     })
     assert res.status_code == 401
+

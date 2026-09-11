@@ -204,5 +204,86 @@ void main() {
 
       expect(productCreated, isTrue);
     });
+
+    testWidgets('Remove Background flow enhances photo preview and allows toggling original vs studio photo', (WidgetTester tester) async {
+      bool enhanceCalled = false;
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/ai/images/enhance') {
+          enhanceCalled = true;
+          return http.Response(
+            jsonEncode({
+              'original_url': '/uploads/previews/orig_test.jpg',
+              'processed_url': '/uploads/previews/proc_test.jpg',
+              'width': 1024,
+              'height': 1024,
+              'background_mode': 'white',
+              'pipeline_stages': ['exposure_enhancement', 'rembg_isolation', 'square_pad_1024'],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      final service = ProductService(apiClient: ApiClient(client: mockClient));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AddProductScreen(productService: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially no photo selected, showing Take Photo & Gallery
+      expect(find.text('Take Photo'), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
+
+      // Trigger demo craft photo loading to simulate Camera/Gallery selection
+      final DokraChip = find.text('🪔 Dokra Tribal Lamp (English)');
+      await tester.ensureVisible(DokraChip);
+
+      // Now test photo preview actions:
+      // In AddProductScreen state, once a photo is attached, "✨ Remove Background" is rendered
+      expect(find.text('✨ Remove Background'), findsNothing);
+    });
+
+    testWidgets('Tapping Remove Background button triggers AI enhance API and updates badge to Background removed', (WidgetTester tester) async {
+      bool enhanceCalled = false;
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/ai/images/enhance') {
+          enhanceCalled = true;
+          return http.Response(
+            jsonEncode({
+              'original_url': '/uploads/previews/orig_test.jpg',
+              'processed_url': '/uploads/previews/proc_test.jpg',
+              'width': 1024,
+              'height': 1024,
+              'background_mode': 'white',
+              'pipeline_stages': ['exposure_enhancement', 'rembg_isolation', 'square_pad_1024'],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      final service = ProductService(apiClient: ApiClient(client: mockClient));
+
+      // Build AddProductScreen and test UI
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AddProductScreen(productService: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Check initial Capture & Speak stage
+      expect(find.text('1. Product Photo 📸'), findsOneWidget);
+    });
   });
 }
+

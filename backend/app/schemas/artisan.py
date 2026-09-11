@@ -37,13 +37,14 @@ class ArtisanUpdate(BaseModel):
 class ArtisanProfileUpdateRequest(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=255, description="Artisan's personal full name")
     craft_category: str = Field(..., min_length=1, max_length=100, description="Craft category (e.g., Handloom, Pottery)")
-    state: str = Field(..., min_length=1, max_length=100, description="State")
-    district: str = Field(..., min_length=1, max_length=100, description="District")
-    preferred_language: str = Field(default="hi", min_length=1, max_length=50, description="Preferred language (e.g., Odia, Hindi, English)")
+    state: Optional[str] = Field(default=None, max_length=100, description="Optional State")
+    district: Optional[str] = Field(default=None, max_length=100, description="Optional District")
+    preferred_language: str = Field(default="Hindi", min_length=1, max_length=50, description="Preferred language (e.g., Odia, Hindi, English)")
     artisan_name: Optional[str] = Field(default=None, max_length=255, description="Optional Artisan / Business Brand Name")
     artisan_type: Optional[str] = Field(default=None, max_length=50, description="Optional Artisan type")
     experience_years: Optional[int] = Field(default=None, ge=0, le=100, description="Optional years of experience")
     description: Optional[str] = Field(default=None, max_length=2000, description="Optional craft description")
+
 
 
 class ArtisanRead(ArtisanBase):
