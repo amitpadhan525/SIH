@@ -3,6 +3,8 @@ import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/widgets/artisan_button.dart';
 
+import 'package:artisan_mobile/widgets/server_config_dialog.dart';
+
 class LoginScreen extends StatefulWidget {
   final AuthService? authService;
 
@@ -147,6 +149,13 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Artisan Login'),
+        actions: [
+          IconButton(
+            tooltip: 'Server Address',
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () => showServerConfigDialog(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

@@ -1,13 +1,14 @@
 class ApiConstants {
-  static const String devBaseUrl = 'http://127.0.0.1:8000';
+  static const String staticTunnelUrl = 'https://plaza-effort-trailside.ngrok-free.dev';
+  static const String devBaseUrl = staticTunnelUrl;
   static const String prodBaseUrl = String.fromEnvironment(
     'API_PROD_URL',
-    defaultValue: 'https://api.artisanai.in',
+    defaultValue: staticTunnelUrl,
   );
 
   static const String _defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: bool.fromEnvironment('dart.vm.product') ? prodBaseUrl : devBaseUrl,
+    defaultValue: staticTunnelUrl,
   );
 
   static String customBaseUrl = _defaultBaseUrl;
