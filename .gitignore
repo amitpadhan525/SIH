@@ -76,3 +76,12 @@ mobile/.packages
 mobile/build/
 *.apk
 *.aab
+
+# Office lock and temp files
+.~lock.*
+*.tmp
+
+# Team Presentation & Internal Pitch Assets (Local Only)
+team_presentation/
+presentation/
+presentations/
