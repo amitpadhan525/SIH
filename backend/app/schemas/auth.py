@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class UserRegisterRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    phone: str = Field(..., min_length=10, max_length=32)
+    phone: str = Field(..., min_length=1, max_length=32)
     password: Optional[str] = Field(default=None, max_length=128)
     role: str = Field(default="artisan", description="'artisan', 'buyer', 'admin'")
     language: str = Field(default="hi", description="'hi', 'or', 'bn', 'en'")
@@ -13,12 +13,12 @@ class UserRegisterRequest(BaseModel):
 
 
 class UserLoginRequest(BaseModel):
-    phone: str = Field(..., min_length=10, max_length=32)
+    phone: str = Field(..., min_length=1, max_length=32)
     password: str = Field(..., min_length=4)
 
 
 class OtpSendRequest(BaseModel):
-    phone: str = Field(..., min_length=10, max_length=32)
+    phone: str = Field(..., min_length=1, max_length=32)
 
 
 class OtpSendResponse(BaseModel):
@@ -28,7 +28,7 @@ class OtpSendResponse(BaseModel):
 
 
 class OtpVerifyRequest(BaseModel):
-    phone: str = Field(..., min_length=10, max_length=32)
+    phone: str = Field(..., min_length=1, max_length=32)
     otp: str = Field(..., min_length=4, max_length=8)
 
 

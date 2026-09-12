@@ -9,7 +9,6 @@ import 'package:artisan_mobile/screens/products/products_screen.dart';
 import 'package:artisan_mobile/screens/profile/edit_profile_screen.dart';
 import 'package:artisan_mobile/services/auth_service.dart';
 import 'package:artisan_mobile/services/product_service.dart';
-import 'package:artisan_mobile/services/sync_service.dart';
 import 'package:artisan_mobile/widgets/artisan_button.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,7 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _productCount = 0;
   int _inquiryCount = 0;
   bool _isLoading = true;
-  bool _isDbConnected = false;
   int _currentNavIndex = 0;
 
   @override
@@ -56,7 +54,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _isDbConnected = isConnected;
           _productCount = products.length;
           _inquiryCount = inqCount;
           _isLoading = false;
@@ -65,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _isDbConnected = false;
           _isLoading = false;
         });
       }

@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:artisan_mobile/core/constants/api_constants.dart';
-import 'package:artisan_mobile/core/network/api_client.dart';
 import 'package:artisan_mobile/core/theme/app_theme.dart';
 import 'package:artisan_mobile/core/utils/currency_formatter.dart';
 import 'package:artisan_mobile/models/product.dart';
@@ -48,7 +47,7 @@ class _AddProductScreenState extends State<AddProductScreen>
   AddProductStage _currentStage = AddProductStage.captureAndSpeak;
 
   // Selected Speech Language
-  String _selectedSpeechLanguage = 'auto'; // 'or', 'hi', 'en', 'auto'
+  final String _selectedSpeechLanguage = 'auto'; // 'or', 'hi', 'en', 'auto'
 
   // Photo State (Original vs Studio Processed)
   Uint8List? _originalPhotoBytes;
@@ -82,7 +81,6 @@ class _AddProductScreenState extends State<AddProductScreen>
   double _recommendedPrice = 1850.0;
   String _pricingRationale =
       'Based on authentic handcrafted materials, artisanal labor, and fair market margin.';
-  Map<String, dynamic>? _fullAiResult;
 
   // Quick Demo Samples for Evaluators & Testing
   static const Map<String, Map<String, String>> _demoPresets = {
@@ -188,21 +186,6 @@ class _AddProductScreenState extends State<AddProductScreen>
         );
       }
     }
-  }
-
-  void _useDemoPhoto(String label) {
-    final bytes = base64Decode(_fallbackJpegBase64);
-    setState(() {
-      _originalPhotoBytes = bytes;
-      _processedPhotoBytes = null;
-      _photoBytes = bytes;
-      _usingProcessedVersion = false;
-      _isBackgroundRemoved = false;
-      _isRemovingBackground = false;
-      _bgRemovalError = null;
-      _photoFilename = 'demo_craft.jpg';
-      _photoSourceLabel = label;
-    });
   }
 
   Future<void> _removeBackground() async {
@@ -461,7 +444,6 @@ class _AddProductScreenState extends State<AddProductScreen>
           _description = desc;
           _recommendedPrice = price;
           _pricingRationale = rationale;
-          _fullAiResult = aiResult;
           _currentStage = AddProductStage.reviewAndPublish;
         });
       }
@@ -541,18 +523,18 @@ class _AddProductScreenState extends State<AddProductScreen>
         setState(() => _isSubmitting = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white),
-                const SizedBox(width: 8),
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text('🎉 Your product is now live for buyers!'),
                 ),
               ],
             ),
             backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: 3),
           ),
         );
 
@@ -1461,6 +1443,24 @@ class _AddProductScreenState extends State<AddProductScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  if (_craftTechnique.isNotEmpty && _craftTechnique != 'Handmade') ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, size: 16, color: AppColors.primaryDark),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Technique: $_craftTechnique',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
 
                   if (_productionDays != null) ...[
                     Row(

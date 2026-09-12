@@ -50,20 +50,37 @@ _OTP_STORE: Dict[str, OtpEntry] = {}
 
 
 def normalize_phone(phone: str) -> str:
-    """Sanitizes and normalizes phone number input, validating sufficient digits."""
-    if not phone:
+    """Sanitizes and normalizes Indian phone number input, strictly enforcing 10-digit mobile."""
+    if not phone or not phone.strip():
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Phone number cannot be empty.",
+            detail="Please enter a valid 10-digit mobile number.",
         )
-    cleaned = re.sub(r"[\s\-\(\)]", "", phone.strip())
+    raw = phone.strip()
+    if re.search(r"[^\d\s\-\(\)\+]", raw):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please enter a valid 10-digit mobile number.",
+        )
+    cleaned = re.sub(r"[\s\-\(\)]", "", raw)
+    if "+" in cleaned and not cleaned.startswith("+"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please enter a valid 10-digit mobile number.",
+        )
     digits_only = re.sub(r"\D", "", cleaned)
-    if len(digits_only) < 10 or len(digits_only) > 15:
+
+    if len(digits_only) == 10:
+        return f"+91{digits_only}"
+    elif len(digits_only) == 12 and digits_only.startswith("91"):
+        return f"+91{digits_only[2:]}"
+    elif len(digits_only) == 11 and digits_only.startswith("0"):
+        return f"+91{digits_only[1:]}"
+    else:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid phone number. Must contain 10 to 15 digits.",
+            detail="Please enter a valid 10-digit mobile number.",
         )
-    return cleaned
 
 
 def _build_token_response(

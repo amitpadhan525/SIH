@@ -206,11 +206,8 @@ void main() {
     });
 
     testWidgets('Remove Background flow enhances photo preview and allows toggling original vs studio photo', (WidgetTester tester) async {
-      bool enhanceCalled = false;
-
       final mockClient = MockClient((request) async {
         if (request.url.path == '/ai/images/enhance') {
-          enhanceCalled = true;
           return http.Response(
             jsonEncode({
               'original_url': '/uploads/previews/orig_test.jpg',
@@ -241,8 +238,8 @@ void main() {
       expect(find.text('Gallery'), findsOneWidget);
 
       // Trigger demo craft photo loading to simulate Camera/Gallery selection
-      final DokraChip = find.text('🪔 Dokra Tribal Lamp (English)');
-      await tester.ensureVisible(DokraChip);
+      final dokraChip = find.text('🪔 Dokra Tribal Lamp (English)');
+      await tester.ensureVisible(dokraChip);
 
       // Now test photo preview actions:
       // In AddProductScreen state, once a photo is attached, "✨ Remove Background" is rendered
@@ -250,11 +247,8 @@ void main() {
     });
 
     testWidgets('Tapping Remove Background button triggers AI enhance API and updates badge to Background removed', (WidgetTester tester) async {
-      bool enhanceCalled = false;
-
       final mockClient = MockClient((request) async {
         if (request.url.path == '/ai/images/enhance') {
-          enhanceCalled = true;
           return http.Response(
             jsonEncode({
               'original_url': '/uploads/previews/orig_test.jpg',

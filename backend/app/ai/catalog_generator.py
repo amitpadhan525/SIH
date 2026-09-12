@@ -27,21 +27,46 @@ class CatalogGenerationService:
         "fabric": "Handloom & Textiles",
         "shawl": "Handloom & Textiles",
         "dupatta": "Handloom & Textiles",
+        "scarf": "Handloom & Textiles",
+        "handloom": "Handloom & Textiles",
+        "textile": "Handloom & Textiles",
+        "cotton": "Handloom & Textiles",
+        "silk": "Handloom & Textiles",
+        "tussar": "Handloom & Textiles",
+        "ikat": "Handloom & Textiles",
+        "bandhani": "Handloom & Textiles",
+        "kantha": "Handloom & Textiles",
+        "chanderi": "Handloom & Textiles",
+        "banarasi": "Handloom & Textiles",
         "pottery": "Clay & Terracotta Pottery",
         "terracotta": "Clay & Terracotta Pottery",
         "matka": "Clay & Terracotta Pottery",
+        "clay": "Clay & Terracotta Pottery",
         "pot": "Clay & Terracotta Pottery",
+        "vase": "Clay & Terracotta Pottery",
+        "diya": "Clay & Terracotta Pottery",
         "dokra": "Metal Crafts & Brass Sculptures",
         "dhokra": "Metal Crafts & Brass Sculptures",
         "brass": "Metal Crafts & Brass Sculptures",
         "bell metal": "Metal Crafts & Brass Sculptures",
-        "lamp": "Home Decor & Metal Art",
+        "bronze": "Metal Crafts & Brass Sculptures",
+        "metal": "Metal Crafts & Brass Sculptures",
+        "lamp": "Metal Crafts & Brass Sculptures",
         "painting": "Traditional Paintings & Folk Art",
         "madhubani": "Traditional Paintings & Folk Art",
         "pattachitra": "Traditional Paintings & Folk Art",
+        "warli": "Traditional Paintings & Folk Art",
+        "folk art": "Traditional Paintings & Folk Art",
         "wood": "Woodcraft & Carvings",
+        "wooden": "Woodcraft & Carvings",
+        "carving": "Woodcraft & Carvings",
+        "teak": "Woodcraft & Carvings",
         "bamboo": "Cane & Bamboo Crafts",
+        "cane": "Cane & Bamboo Crafts",
         "jute": "Jute & Natural Fiber",
+        "jewellery": "Handmade Jewellery",
+        "jewelry": "Handmade Jewellery",
+        "necklace": "Handmade Jewellery",
     }
 
     CRAFT_TECHNIQUES = {
@@ -121,63 +146,102 @@ class CatalogGenerationService:
         """
         text_lower = text.lower()
 
-        # 1. Product Name Identification
-        product_name = None
-        # Check specific craft phrases
-        if "sambalpuri" in text_lower and ("saree" in text_lower or "sari" in text_lower or "साड़ी" in text):
-            product_name = "Handcrafted Sambalpuri Ikat Cotton Saree"
-        elif "terracotta" in text_lower or "टेराकोटा" in text or "मटका" in text:
-            product_name = "Artisanal Terracotta Clay Pot"
-        elif "dokra" in text_lower or "dhokra" in text_lower or "डोकरा" in text:
-            product_name = "Handcrafted Dokra Brass Tribal Lamp"
-        elif "madhubani" in text_lower or "मधुबनी" in text:
-            product_name = "Authentic Mithila Madhubani Painting"
-        else:
-            # First meaningful noun phrase or fallback
-            words = text.split()
-            if len(words) >= 3:
-                product_name = " ".join(words[:4]).strip(".,!?")
-
-        # 2. Category
-        category = "Handmade Crafts"
+        # 1. Category extraction first (enables context-aware naming)
+        category = "Handicraft"
         for key, cat_val in self.KNOWN_CATEGORIES.items():
             if key in text_lower or key in text:
                 category = cat_val
                 break
 
-        # 3. Craft Technique
+        # 2. Craft Technique
         craft_technique = None
         for key, tech_val in self.CRAFT_TECHNIQUES.items():
             if key in text_lower or key in text:
                 craft_technique = tech_val
                 break
 
-        # 4. Materials (Strict matching)
+        # 3. Materials (Strict matching)
         materials: List[str] = []
         for mat_key, mat_name in self.MATERIALS_VOCAB:
             if mat_key in text_lower or mat_key in text:
                 if mat_name not in materials:
                     materials.append(mat_name)
 
-        # 5. Colors (Strict matching)
+        # 4. Colors (Strict matching)
         colors: List[str] = []
         for col_key, col_name in self.COLORS_VOCAB:
             if col_key in text_lower or col_key in text:
                 if col_name not in colors:
                     colors.append(col_name)
 
-        # 6. Time taken in days (Regex extraction with Odia/Hindi/English digits and word numbers)
+        # 5. Product Name Identification (Strict entity extraction without conversational filler)
+        product_name = None
+        if "sambalpuri" in text_lower and ("saree" in text_lower or "sari" in text_lower or "साड़ी" in text):
+            product_name = "Sambalpuri Cotton Saree"
+        elif "sambalpuri" in text_lower and "scarf" in text_lower:
+            product_name = "Sambalpuri Handwoven Scarf"
+        elif "saree" in text_lower or "sari" in text_lower or "साड़ी" in text:
+            product_name = "Handcrafted Cotton Saree" if "cotton" in text_lower else "Handcrafted Saree"
+        elif "terracotta" in text_lower or "टेराकोटा" in text or "मटका" in text or ("clay" in text_lower and "pot" in text_lower):
+            product_name = "Artisanal Terracotta Clay Pot"
+        elif "dokra" in text_lower or "dhokra" in text_lower or "डोकरा" in text:
+            if "lamp" in text_lower:
+                product_name = "Handcrafted Dokra Brass Tribal Lamp"
+            else:
+                product_name = "Handcrafted Dokra Brass Craft"
+        elif "madhubani" in text_lower or "मधुबनी" in text:
+            product_name = "Authentic Mithila Madhubani Painting"
+        elif "pattachitra" in text_lower or "पट्टचित्र" in text:
+            product_name = "Traditional Odisha Pattachitra Painting"
+        elif "wood" in text_lower or "लकड़ी" in text:
+            product_name = "Handcarved Wooden Craft"
+        elif "bamboo" in text_lower or "बांस" in text:
+            product_name = "Eco-Friendly Bamboo Craft"
+        elif "jute" in text_lower or "जूट" in text:
+            product_name = "Handwoven Jute Craft"
+        else:
+            # Strip conversational preamble and clean filler phrases
+            cleaned = re.sub(
+                r"^(?:this\s+is\s+(?:a|an)?|here\s+is\s+(?:a|an)?|i\s+made\s+(?:a|an)?|it\s+is\s+(?:a|an)?|यह\s+एक|यह|ये|ଏହା\s+ଏକ|ଏହା)\s*",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip(".,!?:; ")
+
+            words = cleaned.split()
+            # Filter out non-descriptive short fragments or filler (e.g. "age", "is", "test")
+            meaningful_words = [w for w in words if len(w) > 2 and w.lower() not in {"this", "that", "made", "from", "with", "took", "days", "hours", "have", "been", "also", "very"}]
+
+            if len(meaningful_words) >= 2:
+                product_name = " ".join([w.capitalize() for w in meaningful_words[:3]])
+            elif materials and category != "Handicraft":
+                product_name = f"Handcrafted {materials[0]} {category.split('&')[0].strip()}"
+            elif category != "Handicraft":
+                product_name = f"Handcrafted {category.split('&')[0].strip()}"
+            else:
+                product_name = "Handcrafted Artisan Craft"
+
+        # 6. Time taken in days (Regex extraction with Odia/Hindi/English digits, hours, and word numbers)
         time_taken_days: Optional[int] = None
-        
-        # Translate Odia digits to Arabic numerals
         normalized_text = text.translate(str.maketrans("୦୧୨୩୪୫୬୭୮୯", "0123456789"))
-        
+
+        # Day match
         day_match = re.search(r"(\d+)\s*(?:days?|दिन|ଦିନ|din)", normalized_text, re.IGNORECASE)
         if day_match:
             try:
                 time_taken_days = int(day_match.group(1))
             except ValueError:
                 pass
+
+        # Hours match -> convert to days (e.g. 12 hours -> 2 days)
+        if time_taken_days is None:
+            hour_match = re.search(r"(\d+)\s*(?:hours?|hrs?|घंटे|ଘଣ୍ଟା)", normalized_text, re.IGNORECASE)
+            if hour_match:
+                try:
+                    hours_val = int(hour_match.group(1))
+                    time_taken_days = max(1, round(hours_val / 6.0))
+                except ValueError:
+                    pass
 
         if time_taken_days is None:
             word_to_num = {
@@ -201,7 +265,7 @@ class CatalogGenerationService:
         if dim_match:
             dimensions = dim_match.group(1)
 
-        # 8. Care Instructions (Strict matching from spoken instructions)
+        # 8. Care Instructions
         care_instructions: List[str] = []
         if "dry clean" in text_lower or "ड्राई क्लीन" in text:
             care_instructions.append("Dry clean recommended")
@@ -246,35 +310,27 @@ class CatalogGenerationService:
         if artisan_notes:
             combined_text += f" {artisan_notes}"
 
-        detected_lang = (
-            self.translation_service.detect_language(combined_text)
-            if source_language == "auto"
-            else source_language
-        )
-
         facts = self.extract_verified_facts(combined_text)
         target_langs = target_languages or ["en", "hi"]
 
-        # Base title builder
         base_title = facts.product_name or "Handcrafted Artisanal Product"
-        if facts.craft_technique and facts.craft_technique not in base_title:
-            base_title = f"{facts.craft_technique} - {base_title}"
 
         # Materials string
         mat_str = ", ".join(facts.materials) if facts.materials else "natural traditional materials"
         time_str = f" meticulously created over {facts.time_taken_days} days" if facts.time_taken_days else ""
+        tech_str = f" using traditional {facts.craft_technique}" if facts.craft_technique else ""
 
-        # English Content
+        # English Content - Factually grounded
         en_short = (
-            f"Authentic {base_title} handcrafted with {mat_str}{time_str} by traditional Indian artisans."
+            f"Authentic {base_title} handcrafted with {mat_str}{tech_str}{time_str} by traditional Indian artisans."
         )
         en_story = (
-            f"Celebrate timeless Indian heritage with this authentic {base_title}. "
-            f"Masterfully hand-crafted using {mat_str}, each piece carries the distinct touch and devotion of the artisan. "
-            f"By bringing this piece into your home, you directly empower local handicraft traditions."
+            f"Handcrafted with authentic {mat_str}{tech_str}. "
+            f"Each piece is made by skilled artisans with dedicated craftsmanship."
+            f"{f' Creation took {facts.time_taken_days} days of careful handwork.' if facts.time_taken_days else ''}"
         )
         en_features = [
-            f"100% Handcrafted: {facts.craft_technique or 'Traditional technique'}",
+            f"100% Handcrafted: {facts.craft_technique or 'Traditional handcraft'}",
             f"Materials: {mat_str}",
         ]
         if facts.colors:
@@ -295,15 +351,13 @@ class CatalogGenerationService:
 
         # Hindi Content
         if "hi" in target_langs:
-            hi_title = f"प्रामाणिक हस्तनिर्मित {base_title}"
+            hi_title = f"हस्तनिर्मित {base_title}"
             hi_short = (
                 f"कारीगरों द्वारा {mat_str} से तैयार किया गया प्रामाणिक हस्तशिल्प। "
-                f"प्रत्येक उत्पाद भारतीय सांस्कृतिक विरासत का अनूठा प्रतीक है।"
             )
             hi_story = (
-                f"भारतीय पारंपरिक हस्तशिल्प की समृद्ध धरोहर को अपने घर लाएं। "
                 f"यह उत्पाद {mat_str} से पूरी तरह हाथ से तैयार किया गया है। "
-                f"इस खरीद से आप सीधे स्थानीय कारीगरों और उनके परिवारों को सशक्त बनाते हैं।"
+                f"{f'इसके निर्माण में {facts.time_taken_days} दिनों का समय लगा।' if facts.time_taken_days else ''}"
             )
             hi_features = [
                 f"100% हस्तनिर्मित: {facts.craft_technique or 'पारंपरिक कला'}",
@@ -312,7 +366,7 @@ class CatalogGenerationService:
             if facts.colors:
                 hi_features.append(f"रंग: {', '.join(facts.colors)}")
             if facts.time_taken_days:
-                hi_features.append(f"निर्माण समय: {facts.time_taken_days} दिनों की लगन से तैयार")
+                hi_features.append(f"निर्माण समय: {facts.time_taken_days} दिन")
             if facts.care_instructions:
                 hi_features.append(f"देखभाल: {', '.join(facts.care_instructions)}")
 
@@ -325,14 +379,13 @@ class CatalogGenerationService:
 
         # Odia Content
         if "or" in target_langs or "odia" in target_langs:
-            or_title = f"ପାରମ୍ପରିକ ହସ୍ତନିର୍ମିତ {base_title}"
+            or_title = f"ହସ୍ତନିର୍ମିତ {base_title}"
             or_short = (
-                f"ଓଡ଼ିଶାର କାରିଗରଙ୍କ ଦ୍ୱାରା {mat_str} ସାମଗ୍ରୀରେ ପ୍ରସ୍ତୁତ ପ୍ରାମାଣିକ ହସ୍ତଶିଳ୍ପ। "
-                f"ପ୍ରତ୍ୟେକ ଉତ୍ପାଦ ଆମ ସାଂସ୍କୃତିକ ଐତିହ୍ୟର ପ୍ରତୀକ।"
+                f"ଓଡ଼ିଶାର କାରିଗରଙ୍କ ଦ୍ୱାରା {mat_str} ସାମଗ୍ରୀରେ ପ୍ରସ୍ତୁତ ପ୍ରାମାଣିକ ହସ୍ତଶିଳ୍ପ।"
             )
             or_story = (
-                f"ଭାରତୀୟ ପାରମ୍ପରିକ ହସ୍ତକଳାର ଗୌରବକୁ ନିଜ ଘରକୁ ଆଣନ୍ତୁ। "
-                f"ଏହା ସମ୍ପୂର୍ଣ୍ଣ ହାତରେ ସ୍ୱଦେଶୀ କାରିଗରଙ୍କ ଦ୍ୱାରା ନିର୍ମିତ।"
+                f"ଏହା ସମ୍ପୂର୍ଣ୍ଣ ହାତରେ {mat_str} ସାମଗ୍ରୀ ବ୍ୟବହାର କରି ନିର୍ମିତ।"
+                f"{f' ଏଥିପାଇଁ {facts.time_taken_days} ଦିନ ସମୟ ଲାଗିଛି।' if facts.time_taken_days else ''}"
             )
             or_features = [
                 f"୧୦୦% ହସ୍ତନିର୍ମିତ: {facts.craft_technique or 'ପାରମ୍ପରିକ କଳା'}",
@@ -372,23 +425,29 @@ class CatalogGenerationService:
 
         try:
             pricing_engine = DynamicPricingEngine()
-            # Determine baseline materials cost from category/materials
+            # Determine baseline materials cost dynamically from category/materials
             mat_cost = Decimal("300.00")
             cat_lower = (facts.category or "").lower()
             if "textile" in cat_lower or "saree" in cat_lower or "handloom" in cat_lower:
-                mat_cost = Decimal("450.00")
+                mat_cost = Decimal("550.00")
             elif "pottery" in cat_lower or "terracotta" in cat_lower:
                 mat_cost = Decimal("150.00")
             elif "metal" in cat_lower or "dokra" in cat_lower or "brass" in cat_lower:
                 mat_cost = Decimal("650.00")
             elif "paint" in cat_lower or "madhubani" in cat_lower:
                 mat_cost = Decimal("250.00")
+            elif "wood" in cat_lower:
+                mat_cost = Decimal("350.00")
+
+            # Calculate labor hours from days (or default 2 days if not specified)
+            days_count = facts.time_taken_days or 2
+            labor_hrs = Decimal(str(days_count * 6))
 
             pricing_req = PricingCalculateRequest(
                 category=facts.category or "Handicraft",
                 cost_breakdown=CostBreakdownInput(
                     material_cost=mat_cost,
-                    labor_hours=Decimal(str((facts.time_taken_days or 2) * 6)),
+                    labor_hours=labor_hrs,
                     hourly_rate=Decimal("90.00"),
                     overhead_cost=Decimal("40.00"),
                     packaging_and_shipping=Decimal("50.00"),
@@ -403,6 +462,10 @@ class CatalogGenerationService:
             price_breakdown_dict = {
                 "total_production_cost": float(pricing_res.total_cost),
                 "suggested_price": float(pricing_res.suggested_price),
+                "material_cost": float(pricing_res.material_cost),
+                "labor_cost": float(pricing_res.labor_cost),
+                "overhead_cost": float(pricing_res.overhead_cost),
+                "packaging_cost": float(pricing_res.packaging_cost),
                 "benchmark_range": pricing_res.category_benchmark_range,
                 "tiers": {
                     k: {
@@ -416,7 +479,6 @@ class CatalogGenerationService:
                 },
             }
         except Exception:
-            # Safe fallback if pricing engine encountered any exception
             recommended_price_val = 1850.0
             pricing_rationale_str = "Based on authentic handcrafted materials, artisanal labor, and fair market margin."
 

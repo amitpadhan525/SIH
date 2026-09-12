@@ -224,9 +224,9 @@ class SyncService {
     );
   }
 
-  void clearQueue() {
+  Future<void> clearQueue() async {
     _pendingQueue.clear();
-    _storage.clear();
+    await _storage.clear();
   }
 
   /// Flushes all queued actions to the backend sync batch endpoint

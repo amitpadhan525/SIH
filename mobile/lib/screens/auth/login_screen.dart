@@ -36,31 +36,32 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  String _cleanPhone(String input) {
-    String trimmed = input.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (trimmed.isEmpty) return '';
+  String? _validateAndCleanPhone(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return null;
+    if (RegExp(r'[^\d\s\-\(\)\+]').hasMatch(trimmed)) return null;
+
     final digitsOnly = trimmed.replaceAll(RegExp(r'\D'), '');
-    if (digitsOnly.length == 10 && !trimmed.startsWith('+')) {
+    if (digitsOnly.length == 10) {
       return '+91$digitsOnly';
+    } else if (digitsOnly.length == 12 && digitsOnly.startsWith('91')) {
+      return '+91${digitsOnly.substring(2)}';
+    } else if (digitsOnly.length == 11 && digitsOnly.startsWith('0')) {
+      return '+91${digitsOnly.substring(1)}';
     }
-    if (!trimmed.startsWith('+') && digitsOnly.isNotEmpty) {
-      return '+$digitsOnly';
-    }
-    return trimmed;
+    return null;
   }
 
   Future<void> _handleSendOtp() async {
     final rawInput = _phoneController.text.trim();
     if (rawInput.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your mobile phone number');
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    final phone = _cleanPhone(rawInput);
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-
-    if (digits.length < 10) {
-      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number');
+    final phone = _validateAndCleanPhone(rawInput);
+    if (phone == null) {
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -82,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('OTP sent successfully to $phone'),
+            content: Text('OTP sent to $phone'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -98,7 +99,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleVerifyOtp() async {
-    final phone = _cleanPhone(_phoneController.text.trim());
+    final phone = _validateAndCleanPhone(_phoneController.text.trim());
+    if (phone == null) {
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
     final otp = _otpController.text.trim();
 
     if (otp.length != 6) {
@@ -241,21 +246,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Expanded(
+                      const Expanded(
                         child: Text(
-                          'Server Demo OTP: $_receivedDemoOtp',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                          'Demo Environment: SMS gateway simulated',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark,
                           ),
                         ),
                       ),
-                      TextButton(
+                      TextButton.icon(
+                        icon: const Icon(Icons.flash_on_rounded, size: 14),
+                        label: const Text('Auto-fill Code'),
                         onPressed: () {
                           _otpController.text = _receivedDemoOtp!;
                         },
-                        child: const Text('Fill OTP'),
                       ),
                     ],
                   ),

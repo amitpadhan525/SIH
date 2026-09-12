@@ -184,6 +184,45 @@ void main() {
       expect(find.text('Add New Product'), findsOneWidget);
     });
 
+    testWidgets('LoginScreen rejects 9-digit, 11-digit, non-numeric, and empty phone inputs', (WidgetTester tester) async {
+      final mockClient = MockClient((request) async => http.Response(jsonEncode({}), 200));
+      final authService = AuthService(apiClient: ApiClient(client: mockClient));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LoginScreen(authService: authService),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final phoneField = find.byType(TextField).first;
+      final requestButton = find.text('Request OTP Code');
+
+      // 1. Empty input
+      await tester.enterText(phoneField, '');
+      await tester.tap(requestButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid 10-digit mobile number.'), findsOneWidget);
+
+      // 2. 9 digits (invalid)
+      await tester.enterText(phoneField, '987654321');
+      await tester.tap(requestButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid 10-digit mobile number.'), findsOneWidget);
+
+      // 3. 11 digits (invalid)
+      await tester.enterText(phoneField, '98765432100');
+      await tester.tap(requestButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid 10-digit mobile number.'), findsOneWidget);
+
+      // 4. Non-numeric input (invalid)
+      await tester.enterText(phoneField, '98765abc10');
+      await tester.tap(requestButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter a valid 10-digit mobile number.'), findsOneWidget);
+    });
+
     testWidgets('LoginScreen full phone OTP request and verify widget flow', (WidgetTester tester) async {
       final mockClient = MockClient((request) async {
         if (request.url.path == '/auth/otp/send') {
@@ -223,19 +262,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Enter phone number
-      await tester.enterText(find.byType(TextField).first, '+919876543210');
+      await tester.enterText(find.byType(TextField).first, '9876543210');
       await tester.pumpAndSettle();
 
       // Tap Request OTP Code
       await tester.tap(find.text('Request OTP Code'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Server Demo OTP: 789123'), findsOneWidget);
+      expect(find.text('Demo Environment: SMS gateway simulated'), findsOneWidget);
       expect(find.text('Verify OTP & Login'), findsOneWidget);
 
       // Fill and Verify OTP
-      await tester.ensureVisible(find.text('Fill OTP'));
-      await tester.tap(find.text('Fill OTP'));
+      await tester.ensureVisible(find.text('Auto-fill Code'));
+      await tester.tap(find.text('Auto-fill Code'));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Verify OTP & Login'));

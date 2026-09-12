@@ -103,3 +103,75 @@ def test_get_pricing_benchmarks():
     assert "categories" in data
     assert "textiles" in data["categories"]
     assert data["default_hourly_living_wage"] >= 80.0
+
+
+def test_dynamic_pricing_distinct_products_produce_distinct_prices():
+    """Test that Product A and Product B with different hours/materials produce different prices."""
+    # Product A: Sambalpuri Saree (High labor, high materials)
+    payload_a = {
+        "category": "Handloom & Textiles",
+        "cost_breakdown": {
+            "material_cost": 850.00,
+            "labor_hours": 36.0,
+            "hourly_rate": 90.00,
+            "overhead_cost": 100.00,
+            "packaging_and_shipping": 80.00,
+        },
+        "craft_complexity": "high",
+    }
+    res_a = client.post("/ai/pricing/calculate", json=payload_a)
+    assert res_a.status_code == 200
+    price_a = float(res_a.json()["suggested_price"])
+
+    # Product B: Terracotta Diya (Low labor, low materials)
+    payload_b = {
+        "category": "Clay & Terracotta Pottery",
+        "cost_breakdown": {
+            "material_cost": 80.00,
+            "labor_hours": 3.0,
+            "hourly_rate": 90.00,
+            "overhead_cost": 20.00,
+            "packaging_and_shipping": 30.00,
+        },
+        "craft_complexity": "low",
+    }
+    res_b = client.post("/ai/pricing/calculate", json=payload_b)
+    assert res_b.status_code == 200
+    price_b = float(res_b.json()["suggested_price"])
+
+    # Mandatory assertions:
+    assert price_a != price_b
+    assert price_a > price_b * 3  # Product A is significantly higher cost
+    assert price_a != 2451.23  # Verify hardcoded 2451.23 is not produced
+    assert price_b != 2451.23
+
+
+def test_negative_costs_rejected_by_schema():
+    """Test that negative costs are rejected at API validation boundary with 422."""
+    payload = {
+        "category": "Handicraft",
+        "cost_breakdown": {
+            "material_cost": -50.00,
+            "labor_hours": 5.0,
+        },
+    }
+    response = client.post("/ai/pricing/calculate", json=payload)
+    assert response.status_code == 422
+
+
+def test_zero_costs_handled_gracefully_with_baseline():
+    """Test that zero costs provide a safe living baseline calculation."""
+    payload = {
+        "category": "Handicraft",
+        "cost_breakdown": {
+            "material_cost": 0.00,
+            "labor_hours": 0.0,
+            "overhead_cost": 0.00,
+            "packaging_and_shipping": 0.00,
+        },
+    }
+    response = client.post("/ai/pricing/calculate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert float(data["total_cost"]) > 0
+    assert float(data["suggested_price"]) > float(data["total_cost"])

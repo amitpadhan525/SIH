@@ -110,9 +110,10 @@ void main() {
     test('ClearQueue removes queue from memory and disk', () async {
       final syncService = SyncService(storage: persistentStorage);
       syncService.queueProductCreate({'name': 'Test Item'});
+      await syncService.persistQueue();
       expect(syncService.pendingCount, 1);
 
-      syncService.clearQueue();
+      await syncService.clearQueue();
       expect(syncService.pendingCount, 0);
 
       final reloaded = SyncService(storage: persistentStorage);

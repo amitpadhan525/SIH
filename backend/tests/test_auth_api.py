@@ -100,12 +100,30 @@ def test_otp_send_and_verify_flow():
 
 
 def test_invalid_phone_validation():
-    """Test rejection of invalid phone numbers."""
-    res1 = client.post("/auth/otp/send", json={"phone": "123"})
-    assert res1.status_code == 422
+    """Test strict validation of phone numbers: 9 digits, 10 digits, 11 digits, non-numeric, empty."""
+    # 9 digits (invalid)
+    res_9 = client.post("/auth/otp/send", json={"phone": "987654321"})
+    assert res_9.status_code == 422
+    assert "10-digit" in res_9.json()["detail"]
 
-    res2 = client.post("/auth/otp/send", json={"phone": ""})
-    assert res2.status_code == 422
+    # 11 digits without valid prefix (invalid)
+    res_11 = client.post("/auth/otp/send", json={"phone": "98765432100"})
+    assert res_11.status_code == 422
+    assert "10-digit" in res_11.json()["detail"]
+
+    # Non-numeric characters (invalid)
+    res_abc = client.post("/auth/otp/send", json={"phone": "98765abc10"})
+    assert res_abc.status_code == 422
+    assert "10-digit" in res_abc.json()["detail"]
+
+    # Empty input (invalid)
+    res_empty = client.post("/auth/otp/send", json={"phone": ""})
+    assert res_empty.status_code == 422
+
+    # Valid 10-digit Indian phone (valid)
+    res_10 = client.post("/auth/otp/send", json={"phone": "9876543210"})
+    assert res_10.status_code == 200
+    assert res_10.json()["phone"] == "+919876543210"
 
 
 def test_otp_single_use():

@@ -34,24 +34,37 @@ class DynamicPricingEngine:
         "masterpiece": Decimal("1.50"),
     }
 
+    def _round_to_practical_price(self, price: Decimal) -> Decimal:
+        """Rounds price to nearest ₹10 for clean, practical consumer e-commerce pricing."""
+        val = float(price)
+        if val <= 100:
+            rounded = round(val / 5.0) * 5.0
+        elif val <= 1000:
+            rounded = round(val / 10.0) * 10.0
+        else:
+            rounded = round(val / 50.0) * 50.0
+        return Decimal(str(int(rounded))).quantize(Decimal("1.00"))
+
     def calculate(self, request: PricingCalculateRequest) -> PricingCalculateResponse:
         breakdown: CostBreakdownInput = request.cost_breakdown
 
-        # 1. Labor calculation: if hours not given but days are stated, convert days to hours (6 hrs/day)
-        labor_hours = breakdown.labor_hours
-        if labor_hours <= Decimal("0.00") and request.artisan_stated_days:
+        # 1. Clean & clamp inputs (handle negatives gracefully)
+        material_cost = max(Decimal("0.00"), breakdown.material_cost)
+        overhead_cost = max(Decimal("0.00"), breakdown.overhead_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        packaging_cost = max(Decimal("0.00"), breakdown.packaging_and_shipping).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        hourly_rate = breakdown.hourly_rate if breakdown.hourly_rate > 0 else Decimal("90.00")
+
+        # Labor calculation: if hours not given but days are stated, convert days to hours (6 hrs/day)
+        labor_hours = max(Decimal("0.00"), breakdown.labor_hours)
+        if labor_hours <= Decimal("0.00") and request.artisan_stated_days and request.artisan_stated_days > 0:
             labor_hours = Decimal(str(request.artisan_stated_days * 6))
 
         # Default fallback if no hours or materials were entered: minimal default production unit
-        material_cost = breakdown.material_cost
         if material_cost <= Decimal("0.00") and labor_hours <= Decimal("0.00"):
             material_cost = Decimal("200.00")
             labor_hours = Decimal("4.00")
 
-        hourly_rate = breakdown.hourly_rate if breakdown.hourly_rate > 0 else Decimal("90.00")
         labor_cost = (labor_hours * hourly_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        overhead_cost = breakdown.overhead_cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        packaging_cost = breakdown.packaging_and_shipping.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         total_production_cost = (material_cost + labor_cost + overhead_cost + packaging_cost).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
@@ -64,20 +77,23 @@ class DynamicPricingEngine:
         # Base adjusted cost factoring artisan skill
         adjusted_base = total_production_cost * complexity_multiplier
 
-        # 3. Calculate 3 Tiers
+        # 3. Calculate 3 Tiers with practical consumer rounding
         # Tier 1: Fair Base (25% profit margin) - Minimum price ensuring fair living wage
         margin_fair = 0.25
-        fair_price = (adjusted_base * Decimal("1.25")).quantize(Decimal("1.00"), rounding=ROUND_HALF_UP)
+        raw_fair = adjusted_base * Decimal("1.25")
+        fair_price = max(total_production_cost + Decimal("50.00"), self._round_to_practical_price(raw_fair))
         profit_fair = (fair_price - total_production_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         # Tier 2: Recommended Market (45% profit margin) - Optimal e-commerce sweet spot
         margin_rec = 0.45
-        rec_price = (adjusted_base * Decimal("1.45")).quantize(Decimal("1.00"), rounding=ROUND_HALF_UP)
+        raw_rec = adjusted_base * Decimal("1.45")
+        rec_price = max(fair_price + Decimal("50.00"), self._round_to_practical_price(raw_rec))
         profit_rec = (rec_price - total_production_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         # Tier 3: Premium Heritage (75% profit margin) - High-end exhibitions, exports, bespoke collections
         margin_prem = 0.75
-        prem_price = (adjusted_base * Decimal("1.75")).quantize(Decimal("1.00"), rounding=ROUND_HALF_UP)
+        raw_prem = adjusted_base * Decimal("1.75")
+        prem_price = max(rec_price + Decimal("100.00"), self._round_to_practical_price(raw_prem))
         profit_prem = (prem_price - total_production_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         tiers: Dict[str, PriceTier] = {
