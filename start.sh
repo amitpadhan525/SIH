@@ -14,7 +14,7 @@ cd "$PROJECT_DIR"
 echo ""
 echo "============================================================"
 echo "   🏺 Starting Artisan AI Full Stack Environment"
-echo "============================================================"
+echo "=========================================================="
 echo ""
 
 # 1. Cleanup any dangling processes on port 8000 or existing ngrok
